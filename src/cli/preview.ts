@@ -1,6 +1,4 @@
-import { StatuslineConfig } from './prompts.js'
-import { generateBashStatusline } from '../generators/bash-generator.js'
-import { testStatuslineScript, generateMockClaudeInput, analyzeTestResult } from '../utils/tester.js'
+import { testStatuslineScript, generateMockClaudeInput } from '../utils/tester.js'
 import { promises as fs } from 'fs'
 import chalk from 'chalk'
 import ora from 'ora'
@@ -113,8 +111,8 @@ export async function previewCommand(scriptPath: string): Promise<void> {
       // Performance timing breakdown if debug info is available
       if (testResult.output.includes('Collection time:')) {
         const timingMatch = testResult.output.match(/Collection time: (\d+)ms/)
-        if (timingMatch) {
-          const collectionTime = parseInt(timingMatch[1])
+        if (timingMatch && timingMatch[1]) {
+          const collectionTime = parseInt(timingMatch[1], 10)
           console.log(chalk.cyan(`⏱️  System metrics collection: ${collectionTime}ms`))
           
           if (collectionTime > 100) {
@@ -170,7 +168,9 @@ function getPerformanceLevel(executionTime: number): string {
 function detectPlatformFromOutput(output: string): { platform: string, version?: string } | null {
   if (output.includes('WSL')) {
     const versionMatch = output.match(/WSL(\d+)/)
-    return { platform: 'WSL', version: versionMatch ? `v${versionMatch[1]}` : undefined }
+    return versionMatch?.[1] 
+      ? { platform: 'WSL', version: `v${versionMatch[1]}` }
+      : { platform: 'WSL' }
   }
   
   if (output.includes('Darwin')) {

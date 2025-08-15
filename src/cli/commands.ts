@@ -1,7 +1,6 @@
-import { collectConfiguration, displayConfigSummary } from './prompts.js'
+import { collectConfiguration } from './prompts.js'
 import { generateBashStatusline } from '../generators/bash-generator.js'
 import { validateConfig } from '../utils/validator.js'
-import { installStatusline } from '../utils/installer.js'
 import chalk from 'chalk'
 import ora from 'ora'
 import path from 'path'
