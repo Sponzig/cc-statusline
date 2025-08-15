@@ -51,4 +51,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Comprehensive error handling and validation
 - Modular architecture for easy maintenance
 
-[1.0.0]: https://github.com/chongdashu/cc-statusline/releases/tag/v1.0.0
+[1.0.0]: https://github.com/Sponzig/cc-statusline/releases/tag/v1.0.0

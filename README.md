@@ -8,7 +8,7 @@
 
 *Real-time directory, git branch, model info, costs, and session time tracking*
 
-[![npm version](https://badge.fury.io/js/@chongdashu%2Fcc-statusline.svg)](https://www.npmjs.com/package/@chongdashu/cc-statusline)
+[![npm version](https://badge.fury.io/js/@sponzig%2Fcc-statusline.svg)](https://www.npmjs.com/package/@sponzig/cc-statusline)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Node.js](https://img.shields.io/badge/Node.js-16%2B-green.svg)](https://nodejs.org/)
 
@@ -19,7 +19,7 @@
 **One command. Two questions. Beautiful statusline. ✨**
 
 ```bash
-npx @chongdashu/cc-statusline init
+npx @sponzig/cc-statusline init
 ```
 
 That's it! Answer 2 simple questions, restart Claude Code, and enjoy your new statusline.
@@ -37,9 +37,13 @@ Transform your bland Claude Code terminal into an information-rich powerhouse:
 - **🤖 Model Intelligence** - Shows which Claude model you're using
 - **💵 Real-Time Cost Tracking** - Live cost monitoring via ccusage integration
 - **⌛ Session Management** - Time remaining until usage limit resets with progress bars
-- **📊 Advanced Analytics** - Optional token consumption and burn rate metrics
+- **🔄 Cache Efficiency** - Track prompt caching performance and cost savings
+- **📏 Context Usage** - Monitor context window utilization with smart alerts
+- **📊 Advanced Analytics** - Token consumption, burn rate, and cost projections
+- **💻 System Monitoring** - CPU, RAM, and load averages with smart thresholds
 - **🎨 Beautiful Colors** - TTY-aware colors that respect your terminal theme
-- **⚡ Lightning Fast** - Optimized bash script with <100ms execution time
+- **⚡ Lightning Fast** - Multi-level caching with <100ms execution time
+- **🔧 Auto-Optimization** - Smart compact mode and configurable thresholds
 
 ## 🎛️ Features Overview
 
@@ -51,12 +55,19 @@ Transform your bland Claude Code terminal into an information-rich powerhouse:
 | 🤖 **Model** | Claude model name & version | `Opus 4.1` |
 | 💵 **Usage & Cost** | Real-time costs with hourly rate | `$2.48 ($12.50/h)` |
 | ⌛ **Session Time** | Time until reset with progress | `2h 15m until reset (68%)` |
+| 🔄 **Cache Efficiency** | Prompt caching performance | `85% (saved 12k tok)` |
+| 📏 **Context Usage** | Context window utilization | `45% (90k/200k)` |
 
 ### 🚀 Optional Power Features
 | Feature | Description | Example |
 |---------|-------------|---------|
 | 📊 **Token Stats** | Total tokens consumed | `45,230 tok` |
-| ⚡ **Burn Rate** | Tokens per minute | `847 tpm` |
+| 🔥 **Burn Rate** | Tokens per minute | `847 tpm` |
+| 📈 **Cost Projections** | Estimated session cost | `→$12.50 (2h left)` |
+| ⚠️ **Efficiency Alerts** | Performance warnings | `⚠$15.2/h ⚠85%ctx` |
+| 💻 **CPU Usage** | System CPU monitoring | `15%✓` |
+| 🧠 **RAM Usage** | Memory utilization | `8.2G/16G` |
+| ⚡ **System Load** | Load averages with trends | `1.2↘✓` |
 
 ### 🎨 Example Outputs
 
@@ -67,7 +78,12 @@ Transform your bland Claude Code terminal into an information-rich powerhouse:
 
 **Full Power Mode:**
 ```
-📁 ~/projects/ai-tools  🌿 feature/statusline  🤖 Opus 4.1  ⌛ 2h 15m until reset (68%) [======----]  💵 $16.40 ($7.41/h)  📊 64,080 tok (850 tpm)
+📁 ~/projects/ai-tools  🌿 feature/statusline  🤖 Opus 4.1  ⌛ 2h 15m until reset (68%)  💵 $16.40→$24.50  🔄 87%  📏 65%  💻 15%✓  🧠 8.2G/16G  ⚡ 1.2↘✓
+```
+
+**Smart Compact Mode** (auto-activates with 6+ features):
+```
+📁 ~/ai-tools   🌿 test/vite  🤖 Sonnet 4  💻 6%⚠  🧠 1G/31G (3%)  ⚡ 1.1✓ (8c: 1.08/1.10/1.73)  ⌛ 1h20m  💰 $66→$91  ⚡94%  📏76%  🔥259840
 ```
 
 ## 🛠️ Advanced Usage
@@ -94,7 +110,7 @@ cc-statusline init --output ./my-statusline.sh
 cc-statusline init --no-install
 
 # Global installation for convenience
-npm install -g @chongdashu/cc-statusline
+npm install -g @sponzig/cc-statusline
 ```
 
 ## 🔧 How It Works
@@ -187,7 +203,7 @@ We love contributions! 🎉
 
 **Quick Start:**
 ```bash
-git clone https://github.com/chongdashu/cc-statusline
+git clone https://github.com/Sponzig/cc-statusline
 cd cc-statusline
 npm install && npm run build
 ```
@@ -204,9 +220,9 @@ See our [Contributing Guide](CONTRIBUTING.md) for detailed information.
 
 <div align="center">
 
-![GitHub stars](https://img.shields.io/github/stars/chongdashu/cc-statusline?style=social)
-![GitHub forks](https://img.shields.io/github/forks/chongdashu/cc-statusline?style=social)
-![npm downloads](https://img.shields.io/npm/dm/@chongdashu/cc-statusline)
+![GitHub stars](https://img.shields.io/github/stars/Sponzig/cc-statusline?style=social)
+![GitHub forks](https://img.shields.io/github/forks/Sponzig/cc-statusline?style=social)
+![npm downloads](https://img.shields.io/npm/dm/@sponzig/cc-statusline)
 
 </div>
 
@@ -227,6 +243,6 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 <div align="center">
 
-**Made by [Chong-U](https://github.com/chongdashu) @ [AIOriented](https://aioriented.dev)**
+**Made by [Sponzig](https://github.com/Sponzig)**
 
 </div>

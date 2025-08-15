@@ -1,6 +1,6 @@
 {
-  "name": "@chongdashu/cc-statusline",
-  "version": "1.0.2",
+  "name": "@sponzig/cc-statusline",
+  "version": "2.0.0",
   "description": "Interactive CLI tool for generating custom Claude Code statuslines",
   "type": "module",
   "main": "dist/index.js",
@@ -32,9 +32,8 @@
     "ai-tools"
   ],
   "author": {
-    "name": "Chong-U",
-    "email": "chong-u@aioriented.dev",
-    "url": "https://github.com/chongdashu"
+    "name": "Sponzig",
+    "url": "https://github.com/Sponzig"
   },
   "license": "MIT",
   "dependencies": {
@@ -56,10 +55,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/chongdashu/cc-statusline.git"
+    "url": "git+https://github.com/Sponzig/cc-statusline.git"
   },
   "bugs": {
-    "url": "https://github.com/chongdashu/cc-statusline/issues"
+    "url": "https://github.com/Sponzig/cc-statusline/issues"
   },
-  "homepage": "https://github.com/chongdashu/cc-statusline#readme"
+  "homepage": "https://github.com/Sponzig/cc-statusline#readme"
 }

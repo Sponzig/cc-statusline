@@ -197,7 +197,7 @@ Contributors will be:
 
 - **GitHub Issues** - For bugs and feature requests
 - **GitHub Discussions** - For questions and ideas
-- **Email** - chong-u@aioriented.dev for private matters
+- **GitHub** - Contact @Sponzig for private matters
 
 ## 📜 License
 
