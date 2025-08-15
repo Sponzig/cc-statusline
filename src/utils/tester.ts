@@ -18,7 +18,10 @@ export async function testStatuslineScript(script: string, mockData?: any): Prom
     const tempDir = '/tmp'
     const scriptPath = path.join(tempDir, `statusline-test-${Date.now()}.sh`)
     
-    await fs.writeFile(scriptPath, script, { mode: 0o755 })
+    // Inject mock ccusage data into the script for testing
+    const modifiedScript = injectMockCcusageData(script)
+    
+    await fs.writeFile(scriptPath, modifiedScript, { mode: 0o755 })
     
     // Generate mock input if not provided
     const input = mockData || generateMockClaudeInput()
@@ -98,6 +101,35 @@ export function generateMockCcusageOutput(): any {
       }
     ]
   }
+}
+
+function injectMockCcusageData(script: string): string {
+  // Replace ccusage command calls with mock data
+  const mockCcusageData = JSON.stringify(generateMockCcusageOutput())
+  
+  // The new cache manager pattern uses fresh_result=$(ccusage blocks --json ...)
+  // We need to replace these patterns:
+  
+  // 1. The main ccusage command pattern in cache manager
+  const freshResultPattern = /fresh_result=\$\(timeout 10s ccusage blocks --json 2>\/dev\/null \|\| timeout 5 npx ccusage@latest blocks --json 2>\/dev\/null 2>\/dev\/null\)/g
+  let modifiedScript = script.replace(freshResultPattern, `fresh_result='${mockCcusageData}'`)
+  
+  // 2. Alternative pattern without timeout
+  const freshResultPattern2 = /fresh_result=\$\(ccusage blocks --json 2>\/dev\/null \|\| timeout 5 npx ccusage@latest blocks --json 2>\/dev\/null 2>\/dev\/null\)/g
+  modifiedScript = modifiedScript.replace(freshResultPattern2, `fresh_result='${mockCcusageData}'`)
+  
+  // 3. Legacy patterns (for backwards compatibility)
+  const blocksOutputPattern = /blocks_output=\$\(ccusage blocks --json 2>\/dev\/null \|\| timeout [35] npx ccusage@latest blocks --json 2>\/dev\/null\)/g
+  modifiedScript = modifiedScript.replace(blocksOutputPattern, `blocks_output='${mockCcusageData}'`)
+  
+  // 4. Individual command patterns
+  const ccusagePattern = /ccusage blocks --json 2>\/dev\/null/g
+  modifiedScript = modifiedScript.replace(ccusagePattern, `echo '${mockCcusageData}'`)
+  
+  const npxPattern = /timeout [35] npx ccusage@latest blocks --json 2>\/dev\/null/g
+  modifiedScript = modifiedScript.replace(npxPattern, `echo '${mockCcusageData}'`)
+  
+  return modifiedScript
 }
 
 export function generateMockSystemData(platform?: 'Linux' | 'WSL' | 'Darwin' | 'Windows', scenario?: 'low' | 'normal' | 'high' | 'trending_up' | 'trending_down' | 'stress' | 'edge_case' | 'invalid_data'): any {
@@ -560,8 +592,11 @@ function simulateMissingTools(script: string, scenario: string): string {
 
 async function executeScript(scriptPath: string, input: string): Promise<{ success: boolean, output: string, error?: string }> {
   return new Promise((resolve) => {
+    let isResolved = false
+    
     const process = spawn('bash', [scriptPath], {
-      stdio: ['pipe', 'pipe', 'pipe']
+      stdio: ['pipe', 'pipe', 'pipe'],
+      timeout: 5000 // Built-in timeout
     })
     
     let stdout = ''
@@ -575,36 +610,64 @@ async function executeScript(scriptPath: string, input: string): Promise<{ succe
       stderr += data.toString()
     })
     
-    process.on('close', (code) => {
-      const stderrTrimmed = stderr.trim()
-      resolve({
-        success: code === 0,
-        output: stdout.trim(),
-        ...(stderrTrimmed && { error: stderrTrimmed })
-      })
+    process.on('close', (code, signal) => {
+      if (!isResolved) {
+        isResolved = true
+        const stderrTrimmed = stderr.trim()
+        resolve({
+          success: code === 0 && !signal,
+          output: stdout.trim(),
+          ...(stderrTrimmed && { error: stderrTrimmed }),
+          ...(signal && { error: `Process killed by signal: ${signal}` })
+        })
+      }
     })
     
     process.on('error', (err) => {
-      resolve({
-        success: false,
-        output: '',
-        error: err.message
-      })
+      if (!isResolved) {
+        isResolved = true
+        resolve({
+          success: false,
+          output: stdout.trim(),
+          error: err.message
+        })
+      }
     })
     
-    // Send input and close stdin
-    process.stdin.write(input)
-    process.stdin.end()
+    // Send input and close stdin immediately
+    try {
+      if (process.stdin && process.stdin.writable) {
+        process.stdin.write(input)
+        process.stdin.end()
+      }
+    } catch (err) {
+      if (!isResolved) {
+        isResolved = true
+        resolve({
+          success: false,
+          output: '',
+          error: `Failed to write to stdin: ${err instanceof Error ? err.message : String(err)}`
+        })
+      }
+    }
     
-    // Timeout after 5 seconds
-    setTimeout(() => {
-      process.kill()
-      resolve({
-        success: false,
-        output: stdout,
-        error: 'Script execution timed out (5s)'
-      })
+    // Backup timeout with force kill
+    const timeoutId = setTimeout(() => {
+      if (!isResolved) {
+        isResolved = true
+        process.kill('SIGKILL')
+        resolve({
+          success: false,
+          output: stdout.trim(),
+          error: 'Script execution timed out (5s) - force killed'
+        })
+      }
     }, 5000)
+    
+    // Clear timeout if process ends normally
+    process.on('close', () => {
+      clearTimeout(timeoutId)
+    })
   })
 }
 

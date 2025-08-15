@@ -6,6 +6,17 @@ export async function installStatusline(
   outputPath: string
 ): Promise<void> {
   try {
+    // Safety check: prevent tests from overwriting project files
+    const absolutePath = path.resolve(outputPath)
+    const currentDir = process.cwd()
+    
+    // If this is a test environment and the path is in the current project directory, throw error
+    if (process.env.NODE_ENV === 'test' || process.env.VITEST === 'true') {
+      if (absolutePath.startsWith(currentDir) && outputPath.includes('.claude/statusline.sh')) {
+        throw new Error(`Test safety check: Refusing to overwrite project statusline at ${absolutePath}`)
+      }
+    }
+    
     // Ensure the directory exists
     const dir = path.dirname(outputPath)
     await fs.mkdir(dir, { recursive: true })

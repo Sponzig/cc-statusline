@@ -223,13 +223,37 @@ if [[ \$use_cache -eq 0 ]]; then
   # Execute command and cache result with error handling
   [[ \$CC_STATUSLINE_DEBUG ]] && echo "[DEBUG] Generating fresh ${type} data" >&2
   
-  # Execute command with timeout protection
-  if command -v timeout >/dev/null 2>&1; then
-    fresh_result=\$(timeout 10s ${command} 2>/dev/null)
-    cmd_exit_code=\$?
+  # Execute command with timeout protection and retry for ccusage
+  if [[ "${type}" == "ccusage" ]]; then
+    # For ccusage, try harder with retry mechanism
+    for attempt in 1 2; do
+      [[ \$CC_STATUSLINE_DEBUG ]] && echo "[DEBUG] ccusage attempt \$attempt" >&2
+      if command -v timeout >/dev/null 2>&1; then
+        fresh_result=\$(timeout 10s ${command} 2>/dev/null)
+        cmd_exit_code=\$?
+      else
+        fresh_result=\$(${command} 2>/dev/null)
+        cmd_exit_code=\$?
+      fi
+      
+      # If successful and result looks good, break
+      if [[ \$cmd_exit_code -eq 0 ]] && [[ -n "\$fresh_result" ]] && [[ "\$fresh_result" =~ ^\\{.*\\}$ ]]; then
+        [[ \$CC_STATUSLINE_DEBUG ]] && echo "[DEBUG] ccusage succeeded on attempt \$attempt" >&2
+        break
+      fi
+      
+      # Wait briefly before retry
+      [[ \$attempt -eq 1 ]] && sleep 0.5
+    done
   else
-    fresh_result=\$(${command} 2>/dev/null)
-    cmd_exit_code=\$?
+    # Standard single attempt for non-ccusage commands
+    if command -v timeout >/dev/null 2>&1; then
+      fresh_result=\$(timeout 10s ${command} 2>/dev/null)
+      cmd_exit_code=\$?
+    else
+      fresh_result=\$(${command} 2>/dev/null)
+      cmd_exit_code=\$?
+    fi
   fi
   
   # Validate command output before caching
@@ -273,7 +297,21 @@ if [[ \$use_cache -eq 0 ]]; then
     esac
   else
     [[ \$CC_STATUSLINE_DEBUG ]] && echo "[DEBUG] Command failed or returned empty result for ${type}" >&2
-    cached_result=""
+    
+    # Fallback: try to use stale cache if available (ccusage only)
+    if [[ "${type}" == "ccusage" ]] && [[ -f "\$cache_file" ]]; then
+      cache_age=\$((\${EPOCHSECONDS:-\$(date +%s)} - \$(stat -c %Y "\$cache_file" 2>/dev/null || stat -f %m "\$cache_file" 2>/dev/null || echo 0)))
+      # Use stale cache up to 5 minutes old as fallback
+      if (( cache_age < 300 )); then
+        if validate_cache_integrity "\$cache_file" "${type}"; then
+          cached_result=\$(cat "\$cache_file" 2>/dev/null)
+          [[ \$CC_STATUSLINE_DEBUG ]] && echo "[DEBUG] Using stale ccusage cache as fallback (age: \${cache_age}s)" >&2
+        fi
+      fi
+    fi
+    
+    # If no fallback worked, set empty result
+    [[ -z "\$cached_result" ]] && cached_result=""
   fi
 fi`
   }
