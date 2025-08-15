@@ -119,14 +119,14 @@ export function applyBuiltinReplacements(bashCode: string, options: Optimization
   
   // Apply specific bash test optimizations first (these are the main ones we want to test)
   optimized = optimized
-    // Replace [ -n "$var" ] with [[ $var ]]
-    .replace(/\[ -n "\$([^"]+)" \]/g, '[[ $$$1 ]]')
-    // Replace [ -z "$var" ] with [[ ! $var ]]
-    .replace(/\[ -z "\$([^"]+)" \]/g, '[[ ! $$$1 ]]')
-    // Replace [ -n $var ] with [[ $var ]]
-    .replace(/\[ -n \$([^\s\]]+) \]/g, '[[ $$$1 ]]')
-    // Replace [ -z $var ] with [[ ! $var ]]
-    .replace(/\[ -z \$([^\s\]]+) \]/g, '[[ ! $$$1 ]]')
+    // Replace [ -n "$var" ] with [[ $var ]] (avoid matching double brackets)
+    .replace(/(?<!\[)\[ -n "\$([^"]+)" \]/g, '[[ $$$1 ]]')
+    // Replace [ -z "$var" ] with [[ ! $var ]] (avoid matching double brackets)
+    .replace(/(?<!\[)\[ -z "\$([^"]+)" \]/g, '[[ ! $$$1 ]]')
+    // Replace [ -n $var ] with [[ $var ]] (avoid matching double brackets)
+    .replace(/(?<!\[)\[ -n \$([^\s\]]+) \]/g, '[[ $$$1 ]]')
+    // Replace [ -z $var ] with [[ ! $var ]] (avoid matching double brackets)
+    .replace(/(?<!\[)\[ -z \$([^\s\]]+) \]/g, '[[ ! $$$1 ]]')
   
   // Apply direct pattern replacements using string replacement for exact matches
   for (const [pattern, replacement] of Object.entries(BUILTIN_REPLACEMENTS)) {

@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { 
   applyCompactVariables, 
+  applyBuiltinReplacements,
   optimizeBashCode, 
   getOptimizationStats,
   COMPACT_VARIABLES,
@@ -240,5 +241,64 @@ describe('getOptimizationStats', () => {
     
     expect(Number.isFinite(stats.reductionPercent)).toBe(true)
     expect(stats.reductionPercent).toBeGreaterThan(50)
+  })
+})
+
+describe('applyBuiltinReplacements', () => {
+  it('should correctly transform single bracket test conditions with quoted variables', () => {
+    const input = '[ -z "$cached_result" ] && cached_result=""'
+    const result = applyBuiltinReplacements(input, { useBuiltins: true })
+    
+    // Should transform [ -z "$var" ] to [[ ! $var ]]
+    expect(result).toContain('[[ ! $cached_result ]]')
+    expect(result).not.toContain('[[[')  // Should not create triple brackets
+  })
+
+  it('should NOT transform already-transformed double bracket conditions', () => {
+    const input = '[[ -z "$cached_result" ]] && cached_result=""'
+    const result = applyBuiltinReplacements(input, { useBuiltins: true })
+    
+    // Should leave double brackets unchanged
+    expect(result).toBe(input)
+    expect(result).not.toContain('[[[')  // Should not create triple brackets
+  })
+
+  it('should correctly transform bash test conditions with unquoted variables', () => {
+    const input = '[ -n $var ] && echo "has value"'
+    const result = applyBuiltinReplacements(input, { useBuiltins: true })
+    
+    // Should transform [ -n $var ] to [[ $var ]]
+    expect(result).toContain('[[ $var ]]')
+    expect(result).not.toContain('[[[')  // Should not create triple brackets
+  })
+
+  it('should transform all test condition variants', () => {
+    const input = `
+    [ -n "$var1" ] && echo "test1"
+    [ -z "$var2" ] && echo "test2"
+    [ -n $var3 ] && echo "test3"
+    [ -z $var4 ] && echo "test4"
+    `
+    const result = applyBuiltinReplacements(input, { useBuiltins: true })
+    
+    expect(result).toContain('[[ $var1 ]]')
+    expect(result).toContain('[[ ! $var2 ]]')
+    expect(result).toContain('[[ $var3 ]]')
+    expect(result).toContain('[[ ! $var4 ]]')
+    expect(result).not.toContain('[[[')  // Should not create triple brackets anywhere
+  })
+
+  it('should apply direct pattern replacements from BUILTIN_REPLACEMENTS', () => {
+    const input = '$(date +%s)'
+    const result = applyBuiltinReplacements(input, { useBuiltins: true })
+    
+    expect(result).toBe('${EPOCHSECONDS:-$(date +%s)}')
+  })
+
+  it('should handle edge cases without corruption', () => {
+    const input = 'normal bash code without patterns'
+    const result = applyBuiltinReplacements(input, { useBuiltins: true })
+    
+    expect(result).toBe(input)  // Should be unchanged
   })
 })
