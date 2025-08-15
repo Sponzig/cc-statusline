@@ -299,7 +299,7 @@ export function validateOptimizations(original: string, optimized: string): { is
   if (systemValidationResult.issues.length > 0) {
     issues.push(...systemValidationResult.issues)
     if (systemValidationResult.severity === 'high') maxSeverity = 'high'
-    else if (systemValidationResult.severity === 'medium' && maxSeverity !== 'high') maxSeverity = 'medium'
+    else if (systemValidationResult.severity === 'medium' && maxSeverity === 'low') maxSeverity = 'medium'
   }
   
   // 2. Variable reference validation with enhanced checking
@@ -307,7 +307,7 @@ export function validateOptimizations(original: string, optimized: string): { is
   if (variableValidationResult.issues.length > 0) {
     issues.push(...variableValidationResult.issues)
     if (variableValidationResult.severity === 'high') maxSeverity = 'high'
-    else if (variableValidationResult.severity === 'medium' && maxSeverity !== 'high') maxSeverity = 'medium'
+    else if (variableValidationResult.severity === 'medium' && maxSeverity === 'low') maxSeverity = 'medium'
   }
   
   // 3. Syntax and structure validation
@@ -315,7 +315,7 @@ export function validateOptimizations(original: string, optimized: string): { is
   if (syntaxValidationResult.issues.length > 0) {
     issues.push(...syntaxValidationResult.issues)
     if (syntaxValidationResult.severity === 'high') maxSeverity = 'high'
-    else if (syntaxValidationResult.severity === 'medium' && maxSeverity !== 'high') maxSeverity = 'medium'
+    else if (syntaxValidationResult.severity === 'medium' && maxSeverity === 'low') maxSeverity = 'medium'
   }
   
   // 4. Performance impact validation
@@ -413,13 +413,14 @@ function validateVariableReferences(original: string, optimized: string): { issu
   
   // Check if we lost any essential variables (allowing for renames via COMPACT_VARIABLES)
   const compactMap = Object.values(COMPACT_VARIABLES)
-  const missingVars = originalVars.filter(varName => 
-    !optimizedVars.includes(varName) && 
-    !compactMap.includes(COMPACT_VARIABLES[varName as keyof typeof COMPACT_VARIABLES])
-  )
+  const missingVars = originalVars.filter(varName => {
+    const compactVar = COMPACT_VARIABLES[varName as keyof typeof COMPACT_VARIABLES]
+    return !optimizedVars.includes(varName) && 
+           (!compactVar || !compactMap.includes(compactVar))
+  })
   
   if (missingVars.length > 0) {
-    const nonCriticalMissing = missingVars.filter(v => !criticalVars.includes(v))
+    const nonCriticalMissing = missingVars.filter(v => v && !criticalVars.includes(v))
     if (nonCriticalMissing.length > 0) {
       issues.push(`Non-critical variable declarations removed: ${nonCriticalMissing.join(', ')}`)
       severity = severity === 'low' ? 'medium' : severity

@@ -1,11 +1,9 @@
-import { StatuslineConfig } from '../cli/prompts.js'
 import { promises as fs } from 'fs'
 import path from 'path'
 
 export async function installStatusline(
   script: string,
-  outputPath: string,
-  config: StatuslineConfig
+  outputPath: string
 ): Promise<void> {
   try {
     // Ensure the directory exists
@@ -69,7 +67,7 @@ export async function checkClaudeCodeSetup(): Promise<{
     const dirExists = await fs.access(claudeDir).then(() => true).catch(() => false)
     const settingsExists = await fs.access(settingsPath).then(() => true).catch(() => false)
     
-    let currentStatusline: string | undefined
+    let currentStatusline: string | undefined = undefined
     
     if (settingsExists) {
       try {
@@ -83,7 +81,7 @@ export async function checkClaudeCodeSetup(): Promise<{
     return {
       hasClaudeDir: dirExists,
       hasSettings: settingsExists,
-      currentStatusline
+      ...(currentStatusline !== undefined && { currentStatusline })
     }
   } catch {
     return {
