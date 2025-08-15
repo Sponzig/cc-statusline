@@ -53,12 +53,87 @@ export async function previewCommand(scriptPath: string): Promise<void> {
     console.log(testResult.output)
     console.log(chalk.white('━'.repeat(60)))
     
-    // Basic performance analysis
+    // Enhanced performance analysis with platform detection
     console.log(chalk.cyan(`\n📊 Performance: ${getPerformanceEmoji(getPerformanceLevel(testResult.executionTime))} ${getPerformanceLevel(testResult.executionTime)} (${testResult.executionTime}ms)`))
+    
+    // Platform-specific performance indicators
+    const platformInfo = detectPlatformFromOutput(testResult.output)
+    if (platformInfo) {
+      console.log(chalk.gray(`🖥️  Platform: ${platformInfo.platform} ${platformInfo.version || ''}`))
+      
+      // Platform-specific performance suggestions
+      const suggestions = getPlatformSuggestions(platformInfo.platform, testResult.executionTime)
+      if (suggestions.length > 0) {
+        console.log(chalk.yellow(`💡 Platform optimizations:`))
+        suggestions.forEach(suggestion => {
+          console.log(chalk.yellow(`   • ${suggestion}`))
+        })
+      }
+    }
+    
+    // Enhanced system monitoring validation with Phase 3 features
+    const systemFeatures = ['💻', '🧠', '⚡', 'cpu:', 'ram:', 'load:', 'sys:']
+    const hasSystemMonitoring = systemFeatures.some(feature => testResult.output.includes(feature))
+    
+    if (hasSystemMonitoring) {
+      console.log(chalk.green('✅ System monitoring features are working'))
+      
+      // Validate Phase 3 Display Intelligence features
+      const trendIndicators = ['↗', '↘', '→']
+      const statusIndicators = ['✓', '⚠', '❌']
+      const hasTrends = trendIndicators.some(indicator => testResult.output.includes(indicator))
+      const hasStatus = statusIndicators.some(indicator => testResult.output.includes(indicator))
+      
+      if (hasTrends) {
+        console.log(chalk.green('✅ Load trend indicators detected'))
+      }
+      
+      if (hasStatus) {
+        console.log(chalk.green('✅ System status indicators detected'))
+      }
+      
+      // Check for smart formatting patterns
+      const smartFormats = [
+        /\d+M\/\d+M/,  // MB format
+        /\d+\.\d+G\/\d+\.\d+G/,  // GB with decimals
+        /\d+G\/\d+G/,  // GB integer format
+        /\d+c:/  // CPU cores context
+      ]
+      const hasSmartFormatting = smartFormats.some(pattern => pattern.test(testResult.output))
+      
+      if (hasSmartFormatting) {
+        console.log(chalk.green('✅ Smart formatting detected'))
+      }
+      
+      // Check for ultra-compact mode (multiple metrics in one line)
+      if (testResult.output.includes('sys:') || (testResult.output.includes('💻') && testResult.output.includes('🧠') && testResult.output.includes('⚡'))) {
+        console.log(chalk.green('✅ Enhanced compact mode detected'))
+      }
+      
+      // Performance timing breakdown if debug info is available
+      if (testResult.output.includes('Collection time:')) {
+        const timingMatch = testResult.output.match(/Collection time: (\d+)ms/)
+        if (timingMatch) {
+          const collectionTime = parseInt(timingMatch[1])
+          console.log(chalk.cyan(`⏱️  System metrics collection: ${collectionTime}ms`))
+          
+          if (collectionTime > 100) {
+            console.log(chalk.yellow('   ⚠️  System monitoring overhead is high'))
+          } else if (collectionTime < 50) {
+            console.log(chalk.green('   ✅ System monitoring is highly optimized'))
+          }
+        }
+      }
+      
+      // Validate configurable thresholds are working
+      if (testResult.output.includes('# Red at') || testResult.output.includes('# Yellow at')) {
+        console.log(chalk.green('✅ Configurable thresholds are active'))
+      }
+    }
     
     // Basic output validation
     if (testResult.output.includes('📁') || testResult.output.includes('🌿') || testResult.output.includes('🤖')) {
-      console.log(chalk.green('✅ Statusline features appear to be working'))
+      console.log(chalk.green('✅ Basic statusline features appear to be working'))
     } else {
       console.log(chalk.yellow('⚠️  Basic features may not be displaying correctly'))
     }
@@ -90,4 +165,63 @@ function getPerformanceLevel(executionTime: number): string {
   if (executionTime > 500) return 'slow'
   if (executionTime > 100) return 'good'
   return 'excellent'
+}
+
+function detectPlatformFromOutput(output: string): { platform: string, version?: string } | null {
+  if (output.includes('WSL')) {
+    const versionMatch = output.match(/WSL(\d+)/)
+    return { platform: 'WSL', version: versionMatch ? `v${versionMatch[1]}` : undefined }
+  }
+  
+  if (output.includes('Darwin')) {
+    return { platform: 'macOS' }
+  }
+  
+  if (output.includes('Linux')) {
+    return { platform: 'Linux' }
+  }
+  
+  if (output.includes('Microsoft') || output.includes('microsoft')) {
+    return { platform: 'WSL' }
+  }
+  
+  return null
+}
+
+function getPlatformSuggestions(platform: string, executionTime: number): string[] {
+  const suggestions: string[] = []
+  
+  switch (platform) {
+    case 'WSL':
+      if (executionTime > 200) {
+        suggestions.push('WSL detected - performance optimizations are active')
+        suggestions.push('Consider upgrading to WSL2 for better performance')
+      }
+      if (executionTime > 300) {
+        suggestions.push('Enable WSL-specific /proc filesystem optimizations')
+      }
+      break
+      
+    case 'macOS':
+      if (executionTime > 250) {
+        suggestions.push('Ensure sysctl and vm_stat commands are available')
+        suggestions.push('Dynamic page size detection is enabled')
+      }
+      if (executionTime > 400) {
+        suggestions.push('Consider using brew to install missing system tools')
+      }
+      break
+      
+    case 'Linux':
+      if (executionTime > 200) {
+        suggestions.push('Enhanced /proc filesystem optimizations are active')
+        suggestions.push('Consider reducing system monitoring refresh rate')
+      }
+      if (executionTime > 350) {
+        suggestions.push('Verify vmstat and /proc filesystem access')
+      }
+      break
+  }
+  
+  return suggestions
 }
