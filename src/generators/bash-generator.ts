@@ -42,7 +42,7 @@ export function generateBashStatusline(config: StatuslineConfig): string {
   // Pre-compute feature flags for better performance
   const features = new Set(config.features)
   const hasGit = features.has('git')
-  const hasUsage = features.has('usage') || features.has('session') || features.has('tokens') || features.has('burnrate')
+  const hasUsage = features.has('usage') || features.has('session') || features.has('tokens') || features.has('burnrate') || features.has('cache') || features.has('projections') || features.has('context') || features.has('alerts')
   const hasSystem = features.has('cpu') || features.has('memory') || features.has('load')
   const hasDirectory = features.has('directory')
   const hasModel = features.has('model')
@@ -54,7 +54,18 @@ export function generateBashStatusline(config: StatuslineConfig): string {
     showTokens: features.has('tokens'),
     showBurnRate: features.has('burnrate'),
     showSession: features.has('session'),
-    showProgressBar: config.theme !== 'minimal' && features.has('session')
+    showProgressBar: config.theme !== 'minimal' && features.has('session'),
+    showCacheEfficiency: features.has('cache'),
+    showProjections: features.has('projections'),
+    showContextUsage: features.has('context'),
+    showEfficiencyAlerts: features.has('alerts'),
+    compactMode: config.theme === 'compact',
+    thresholds: {
+      costWarning: 15.0,      // Default: warn at $15/hour
+      timeWarning: 30,        // Default: warn with 30 minutes left
+      contextWarning: 80,     // Default: warn at 80% context usage
+      efficiencyWarning: 25   // Default: warn when 25% above average burn rate
+    }
   }
 
   const gitConfig = {

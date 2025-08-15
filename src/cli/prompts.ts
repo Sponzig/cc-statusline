@@ -33,8 +33,12 @@ export async function collectConfiguration(): Promise<StatuslineConfig> {
         { name: '⚡ System Load', value: 'load', checked: false },
         { name: '💵 Usage & Cost', value: 'usage', checked: true },
         { name: '⌛ Session Time Remaining', value: 'session', checked: true },
+        { name: '🔄 Cache Efficiency', value: 'cache', checked: true },
+        { name: '📏 Context Usage', value: 'context', checked: true },
+        { name: '🔥 Burn Rate (tokens/min)', value: 'burnrate', checked: false },
         { name: '📊 Token Statistics', value: 'tokens', checked: false },
-        { name: '🔥 Burn Rate (tokens/min)', value: 'burnrate', checked: false }
+        { name: '📈 Cost Projections', value: 'projections', checked: false },
+        { name: '⚠️ Efficiency Alerts', value: 'alerts', checked: false }
       ],
       validate: (answer: string[]) => {
         if (answer.length < 1) {
