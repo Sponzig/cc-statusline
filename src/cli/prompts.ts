@@ -1,21 +1,66 @@
 import inquirer from 'inquirer'
 
+/**
+ * Configuration interface for statusline generation
+ * 
+ * This interface defines all the options available for customizing
+ * the Claude Code statusline appearance and behavior.
+ * 
+ * @interface StatuslineConfig
+ */
 export interface StatuslineConfig {
+  /** Array of feature identifiers to enable in the statusline */
   features: string[]
+  
+  /** Target runtime environment for the generated script */
   runtime: 'bash' | 'python' | 'node'
+  
+  /** Whether to enable colors and visual styling */
   colors: boolean
+  
+  /** Display theme affecting information density and formatting */
   theme: 'minimal' | 'detailed' | 'compact'
+  
+  /** Whether to integrate with ccusage for cost/usage tracking */
   ccusageIntegration: boolean
+  
+  /** Whether to enable debug logging in generated scripts */
   logging: boolean
+  
+  /** Whether to use custom emojis instead of text labels */
   customEmojis: boolean
+  
+  /** 
+   * Optional system monitoring configuration
+   * Only used when system monitoring features are enabled
+   */
   systemMonitoring?: {
+    /** How often to refresh system metrics (in milliseconds) */
     refreshRate: number
+    /** CPU usage threshold for warnings (0-100) */
     cpuThreshold: number
+    /** Memory usage threshold for warnings (0-100) */
     memoryThreshold: number
+    /** Load average threshold for warnings */
     loadThreshold: number
   }
 }
 
+/**
+ * Interactive configuration collection using Inquirer.js
+ * 
+ * Presents a series of prompts to gather user preferences for
+ * statusline generation. Uses smart defaults based on common
+ * usage patterns and provides clear descriptions for each option.
+ * 
+ * @returns Promise that resolves to the collected configuration
+ * 
+ * @example
+ * ```typescript
+ * const config = await collectConfiguration()
+ * console.log('Selected features:', config.features)
+ * ```
+ */
 export async function collectConfiguration(): Promise<StatuslineConfig> {
   console.log('🚀 Welcome to cc-statusline! Let\'s create your custom Claude Code statusline.\n')
 
@@ -110,9 +155,9 @@ export async function collectConfiguration(): Promise<StatuslineConfig> {
       }
     ])
     
-    // Merge system monitoring config
+    // Merge system monitoring config (convert seconds to milliseconds for refreshRate)
     config.systemMonitoring = {
-      refreshRate: parseInt(systemConfig.refreshRate),
+      refreshRate: parseInt(systemConfig.refreshRate) * 1000, // Convert seconds to milliseconds
       cpuThreshold: parseInt(systemConfig.cpuThreshold),
       memoryThreshold: parseInt(systemConfig.memoryThreshold),
       loadThreshold: parseFloat(systemConfig.loadThreshold)
@@ -122,7 +167,7 @@ export async function collectConfiguration(): Promise<StatuslineConfig> {
   // Set intelligent defaults for system monitoring if not already configured
   if (!config.systemMonitoring && hasSystemFeatures) {
     config.systemMonitoring = {
-      refreshRate: 3, // 3 second default refresh rate
+      refreshRate: 3000, // 3 seconds in milliseconds
       cpuThreshold: 75,
       memoryThreshold: 80,
       loadThreshold: 2.0

@@ -12,13 +12,17 @@
     "dev": "tsup --watch",
     "start": "node dist/index.js",
     "test": "npm run build && node dist/test.js",
+    "test:unit": "vitest",
+    "test:unit:run": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:integration": "npm run build && node dist/test.js",
     "prepublishOnly": "npm run build"
   },
   "keywords": [
     "claude-code",
     "claude",
     "statusline",
-    "status-line", 
+    "status-line",
     "cli",
     "terminal",
     "productivity",
@@ -33,16 +37,18 @@
   },
   "license": "MIT",
   "dependencies": {
+    "chalk": "^5.3.0",
     "commander": "^11.1.0",
     "inquirer": "^9.2.12",
-    "chalk": "^5.3.0",
     "ora": "^7.0.1"
   },
   "devDependencies": {
     "@types/inquirer": "^9.0.7",
     "@types/node": "^20.10.5",
+    "@vitest/coverage-v8": "^3.2.4",
     "tsup": "^8.0.1",
-    "typescript": "^5.3.3"
+    "typescript": "^5.3.3",
+    "vitest": "^3.2.4"
   },
   "engines": {
     "node": ">=16.0.0"

@@ -1,6 +1,7 @@
 import { collectConfiguration } from './prompts.js'
 import { generateBashStatusline } from '../generators/bash-generator.js'
 import { validateConfig } from '../utils/validator.js'
+import { withRetry, createFileSystemRetry, createEnhancedError } from '../utils/retry.js'
 import chalk from 'chalk'
 import ora from 'ora'
 import path from 'path'
@@ -59,16 +60,39 @@ export async function initCommand(options: InitOptions): Promise<void> {
 
     // Always write the script file first
     const writeSpinner = ora('Writing statusline script...').start()
+    const fileRetry = createFileSystemRetry()
+    
     try {
-      // Ensure directory exists and write the script
+      // Ensure directory exists and write the script with retry logic
       const dir = path.dirname(resolvedPath)
       const fs = await import('fs/promises')
-      await fs.mkdir(dir, { recursive: true })
-      await fs.writeFile(resolvedPath, script, { mode: 0o755 })
+      
+      await fileRetry(() => fs.mkdir(dir, { recursive: true }))
+      await fileRetry(() => fs.writeFile(resolvedPath, script, { mode: 0o755 }))
+      
       writeSpinner.succeed('Statusline script generated!')
     } catch (error) {
       writeSpinner.fail('Failed to write statusline script')
-      console.error(chalk.red(`Error: ${error instanceof Error ? error.message : String(error)}`))
+      
+      const enhancedError = createEnhancedError(
+        error instanceof Error ? error : new Error(String(error)),
+        {
+          operation: 'Write statusline script',
+          file: resolvedPath,
+          details: {
+            directory: path.dirname(resolvedPath),
+            filename: path.basename(resolvedPath),
+            scriptSize: script.length
+          }
+        }
+      )
+      
+      console.error(chalk.red('❌ Failed to write statusline script:'))
+      console.error(chalk.red(enhancedError.message))
+      console.error(chalk.yellow('\n💡 Troubleshooting:'))
+      console.error(chalk.white('   • Check directory permissions'))
+      console.error(chalk.white('   • Ensure sufficient disk space'))
+      console.error(chalk.white('   • Try a different output path with --output'))
       process.exit(1)
     }
 
@@ -79,7 +103,12 @@ export async function initCommand(options: InitOptions): Promise<void> {
       try {
         // Only update settings, script is already written
         const { updateSettingsJson } = await import('../utils/installer.js')
-        await updateSettingsJson(path.dirname(resolvedPath), path.basename(resolvedPath))
+        
+        await withRetry(
+          () => updateSettingsJson(path.dirname(resolvedPath), path.basename(resolvedPath)),
+          { maxRetries: 2, baseDelay: 500 }
+        )
+        
         installSpinner.succeed('✅ Statusline installed!')
         
         console.log(chalk.green('\n🎉 Success! Your custom statusline is ready!'))
@@ -92,7 +121,12 @@ export async function initCommand(options: InitOptions): Promise<void> {
         installSpinner.fail('Failed to install statusline configuration')
         
         console.log(chalk.yellow('\n⚠️  Settings.json could not be updated automatically.'))
-        console.log(chalk.cyan('\nManual Configuration Required:'))
+        
+        if (error instanceof Error && error.message.includes('Enhanced error')) {
+          console.log(chalk.red(`\nError details: ${error.message}`))
+        }
+        
+        console.log(chalk.cyan('\n💡 Manual Configuration Required:'))
         console.log(chalk.white('Add this to your .claude/settings.json file:'))
         console.log(chalk.gray('\n{'))
         console.log(chalk.gray('  "statusLine": {'))
@@ -102,6 +136,10 @@ export async function initCommand(options: InitOptions): Promise<void> {
         console.log(chalk.gray('  }'))
         console.log(chalk.gray('}'))
         console.log(chalk.cyan(`\n📁 Statusline script saved to: ${chalk.white(resolvedPath)}`))
+        console.log(chalk.yellow('\n🔧 Troubleshooting:'))
+        console.log(chalk.white('   • Check .claude directory permissions'))
+        console.log(chalk.white('   • Ensure settings.json is not read-only'))
+        console.log(chalk.white('   • Try running with elevated permissions if needed'))
       }
     } else {
       // --no-install: Script is already written, just inform user

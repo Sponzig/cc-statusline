@@ -7,6 +7,30 @@ import { cacheManager, generateFeatureHash } from '../utils/cache-manager.js'
 import { generateOptimizedBashStatusline } from './template-cache.js'
 import { optimizeBashCode, getOptimizationStats } from './bash-optimizer.js'
 
+/**
+ * Main bash statusline generator with advanced caching and optimization
+ * 
+ * This is the primary entry point for generating Claude Code statuslines.
+ * It orchestrates feature modules, applies multi-level caching strategies,
+ * and performs comprehensive code optimization to ensure fast execution.
+ * 
+ * The generation process follows these steps:
+ * 1. Check optimized template cache for exact match
+ * 2. Fall back to component-level caching if available
+ * 3. Generate fresh script with full feature composition
+ * 4. Apply bash optimization pipeline
+ * 5. Cache results for future use
+ * 
+ * @param config - Statusline configuration from user prompts
+ * @returns Optimized bash script ready for execution
+ * 
+ * @example
+ * ```typescript
+ * const config = await collectConfiguration()
+ * const script = generateBashStatusline(config)
+ * await fs.writeFile('.claude/statusline.sh', script, { mode: 0o755 })
+ * ```
+ */
 export function generateBashStatusline(config: StatuslineConfig): string {
   const startTime = Date.now()
   

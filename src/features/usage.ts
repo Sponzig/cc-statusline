@@ -1,15 +1,37 @@
 import { cacheManager, generateContextHash } from '../utils/cache-manager.js'
 import { optimizeBashCode } from '../generators/bash-optimizer.js'
 
+/**
+ * Configuration interface for usage and cost tracking features
+ * 
+ * @interface UsageFeature
+ */
 export interface UsageFeature {
+  /** Whether usage tracking is enabled at all */
   enabled: boolean
+  /** Show cost information ($X.XX format) */
   showCost: boolean
+  /** Show token count statistics */
   showTokens: boolean
+  /** Show tokens per minute burn rate */
   showBurnRate: boolean
+  /** Show session time remaining */
   showSession: boolean
+  /** Show visual progress bar for session */
   showProgressBar: boolean
 }
 
+/**
+ * Generate bash code for ccusage integration and data collection
+ * 
+ * Creates optimized bash functions that query ccusage for cost and usage
+ * statistics. Includes intelligent caching and error handling for cases
+ * where ccusage is not available.
+ * 
+ * @param config - Usage feature configuration
+ * @param colors - Whether color output is enabled
+ * @returns Bash code for usage data collection
+ */
 export function generateUsageBashCode(config: UsageFeature, colors: boolean): string {
   if (!config.enabled) return ''
 
@@ -103,6 +125,19 @@ fi`
   return optimizedCode
 }
 
+/**
+ * Generate utility functions for time formatting and progress bars
+ * 
+ * Creates cross-platform bash utilities for:
+ * - Converting ISO timestamps to epoch time
+ * - Formatting time in HH:MM format  
+ * - Rendering ASCII progress bars
+ * 
+ * Includes fallbacks for different date command variants (GNU, BSD, macOS)
+ * and Python-based parsing for maximum compatibility.
+ * 
+ * @returns Optimized bash utility functions
+ */
 export function generateUsageUtilities(): string {
   const utilities = `
 # ---- time helpers ----
@@ -133,24 +168,25 @@ progress_bar() {
   return optimizeBashCode(utilities)
 }
 
-export function generateUsageDisplayCode(config: UsageFeature, emojis: boolean): string {
-  if (!config.enabled) return ''
-
-  let displayCode = ''
-
-  if (config.showSession) {
-    const sessionEmoji = emojis ? '⌛' : 'session:'
-    displayCode += `
+/**
+ * Generate session display code with optional progress bar
+ */
+function generateSessionDisplay(emojis: boolean, showProgressBar: boolean): string {
+  const sessionEmoji = emojis ? '⌛' : 'session:'
+  return `
 # session time
 if [[ $sess_txt ]]; then
-  printf '  ${sessionEmoji} %s%s%s' "$(sess_clr)" "$sess_txt" "$(rst)"${config.showProgressBar ? `
+  printf '  ${sessionEmoji} %s%s%s' "$(sess_clr)" "$sess_txt" "$(rst)"${showProgressBar ? `
   printf '  %s[%s]%s' "$(sess_clr)" "$sess_bar" "$(rst)"` : ''}
 fi`
-  }
+}
 
-  if (config.showCost) {
-    const costEmoji = emojis ? '💵' : '$'
-    displayCode += `
+/**
+ * Generate cost display code with optional burn rate
+ */
+function generateCostDisplay(emojis: boolean): string {
+  const costEmoji = emojis ? '💵' : '$'
+  return `
 # cost
 if [[ $cost_usd && $cost_usd =~ ^[0-9.]+$ ]]; then
   if [[ $cost_ph && $cost_ph =~ ^[0-9.]+$ ]]; then
@@ -159,19 +195,39 @@ if [[ $cost_usd && $cost_usd =~ ^[0-9.]+$ ]]; then
     printf '  ${costEmoji} %s$%.2f%s' "$(cost_clr)" "$cost_usd" "$(rst)"
   fi
 fi`
-  }
+}
 
-  if (config.showTokens) {
-    const tokenEmoji = emojis ? '📊' : 'tok:'
-    displayCode += `
+/**
+ * Generate tokens display code with optional burn rate
+ */
+function generateTokensDisplay(emojis: boolean, showBurnRate: boolean): string {
+  const tokenEmoji = emojis ? '📊' : 'tok:'
+  return `
 # tokens
 if [[ $tot_tokens && $tot_tokens =~ ^[0-9]+$ ]]; then
-  if [[ $tpm && $tpm =~ ^[0-9.]+$ ]] && ${config.showBurnRate ? 'true' : 'false'}; then
+  if [[ $tpm && $tpm =~ ^[0-9.]+$ ]] && ${showBurnRate ? 'true' : 'false'}; then
     printf '  ${tokenEmoji} %s%s tok (%.0f tpm)%s' "$(usage_clr)" "$tot_tokens" "$tpm" "$(rst)"
   else
     printf '  ${tokenEmoji} %s%s tok%s' "$(usage_clr)" "$tot_tokens" "$(rst)"
   fi
 fi`
+}
+
+export function generateUsageDisplayCode(config: UsageFeature, emojis: boolean): string {
+  if (!config.enabled) return ''
+
+  let displayCode = ''
+
+  if (config.showSession) {
+    displayCode += generateSessionDisplay(emojis, config.showProgressBar)
+  }
+
+  if (config.showCost) {
+    displayCode += generateCostDisplay(emojis)
+  }
+
+  if (config.showTokens) {
+    displayCode += generateTokensDisplay(emojis, config.showBurnRate)
   }
 
   return optimizeBashCode(displayCode)

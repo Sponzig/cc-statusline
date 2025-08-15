@@ -1,37 +1,84 @@
 import { createHash } from 'crypto'
 
+/**
+ * Cache key structure for identifying cached entries
+ * 
+ * @interface CacheKey
+ */
 export interface CacheKey {
+  /** Type of cached content for namespace isolation */
   type: 'ccusage' | 'git' | 'system' | 'template' | 'template_fragment' | 'template_combination'
-  context: string  // pwd hash for git, features hash for template
+  /** Context hash for cache invalidation (pwd hash for git, features hash for template) */
+  context: string
+  /** Creation timestamp for debugging and metrics */
   timestamp: number
 }
 
+/**
+ * Cache entry wrapper with metadata
+ * 
+ * @interface CacheEntry
+ * @template T - Type of cached value
+ */
 export interface CacheEntry<T = any> {
+  /** Cache key for identification */
   key: CacheKey
+  /** The actual cached value */
   value: T
+  /** Expiration timestamp */
   expiry: number
+  /** Number of cache hits for usage analytics */
   hits: number
 }
 
+/**
+ * Configuration for cache behavior and TTL values
+ * 
+ * @interface CacheConfig
+ */
 export interface CacheConfig {
-  memoryTTL: number     // Memory cache TTL in milliseconds (default: 5000)
-  fileTTL: number       // File cache TTL in seconds (default: 30-300)
-  maxMemoryEntries: number  // Max entries in memory cache (default: 100)
-  templateFragmentTTL: number // Template fragment cache TTL (default: 300000 = 5 minutes)
-  templateCombinationTTL: number // Template combination cache TTL (default: 60000 = 1 minute)
+  /** Memory cache TTL in milliseconds (default: 5000) */
+  memoryTTL: number
+  /** File cache TTL in seconds (default: 30-300) */
+  fileTTL: number
+  /** Max entries in memory cache (default: 100) */
+  maxMemoryEntries: number
+  /** Template fragment cache TTL (default: 300000 = 5 minutes) */
+  templateFragmentTTL: number
+  /** Template combination cache TTL (default: 60000 = 1 minute) */
+  templateCombinationTTL: number
 }
 
+/**
+ * Performance and optimization metrics tracking
+ * 
+ * @interface OptimizationMetrics
+ */
 export interface OptimizationMetrics {
+  /** Final generated script size in characters */
   scriptSize: number
+  /** Time taken to generate script in milliseconds */
   generationTime: number
+  /** Runtime execution time for the script */
   executionTime: number
+  /** Percentage of requests served from cache */
   cacheHitRate: number
+  /** Complexity score based on enabled features */
   featureComplexity: number
 }
 
 /**
- * Multi-level cache manager
- * Provides memory cache (Node.js) + file cache (bash) + process cache (script variables)
+ * Multi-level cache manager with advanced performance optimization
+ * 
+ * Provides sophisticated caching across three levels:
+ * 1. Memory cache (Node.js) - Fastest, for frequently accessed data
+ * 2. File cache (bash) - Persistent across runs, for git/system data  
+ * 3. Process cache (script variables) - Runtime optimization within scripts
+ * 
+ * Features intelligent cache invalidation, performance metrics tracking,
+ * and automatic cleanup to prevent memory leaks.
+ * 
+ * @class CacheManager
  */
 export class CacheManager {
   private memoryCache = new Map<string, CacheEntry>()
