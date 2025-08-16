@@ -294,6 +294,7 @@ if [[ \$sess_txt ]]; then
   if [[ \$remaining ]]; then
     formatted_time=\$(format_time_compact "\$remaining" "${isUltraCompact ? '1' : '0'}")
     printf '  ⌛ %s%s%s${spacing}' "$(sess_clr)" "\$formatted_time" "$(rst)"
+    content_displayed=1
   fi
 fi`
     }
@@ -311,6 +312,7 @@ if [[ \$cost_usd ]]; then
     printf '→%s' "\$formatted_proj"
   }
   printf '%s${spacing}' "$(rst)"
+  content_displayed=1
 fi`
     }
 
@@ -321,6 +323,7 @@ fi`
 # cache efficiency
 if [[ \$cache_efficiency ]]; then
   printf '  ${cacheEmoji}%s%.0f%%%s${spacing}' "$(cache_clr)" "\$cache_efficiency" "$(rst)"
+  content_displayed=1
 fi`
     }
 
@@ -335,6 +338,7 @@ if [[ \$context_usage_pct ]]; then
   else
     printf '  📏%s%d%%%s${spacing}' "$(context_clr)" "\$context_usage_pct" "$(rst)"
   fi
+  content_displayed=1
 fi`
     }
 
@@ -346,12 +350,11 @@ if [[ \$tpm ]]; then
   formatted_tpm=\$(format_number_k "\$tpm" "${isUltraCompact ? '1' : '0'}")
   unit="${isUltraCompact ? '' : ' tpm'}"
   printf '  🔥%s%s%s%s${spacing}' "$(usage_clr)" "\$formatted_tpm" "\$unit" "$(rst)"
+  content_displayed=1
 fi`
     }
 
-    displayCode += `
-# newline after compact display
-printf '\\n'`
+    // Note: Global conditional newline is handled by the main display section
 
     return optimizeBashCode(displayCode)
   }

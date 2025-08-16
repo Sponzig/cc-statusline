@@ -209,4 +209,51 @@ describe('generateBashStatusline', () => {
     expect(result).not.toContain('\n\n\n\n')
     expect(result).not.toMatch(/^\s+$/m) // No lines with only whitespace
   })
+
+  describe('Content Tracking and Rate Limiting Integration', () => {
+    it('should include rate limiting helper functions', () => {
+      const result = generateBashStatusline(minimalConfig)
+      
+      expect(result).toContain('# ---- rate limiting to prevent spam ----')
+      expect(result).toContain('rate_limit_file=')
+      expect(result).toContain('min_interval=')
+    })
+
+    it('should include content tracking helper functions', () => {
+      const result = generateBashStatusline(minimalConfig)
+      
+      expect(result).toContain('# ---- content tracking to prevent empty newlines ----')
+      expect(result).toContain('content_displayed=0')
+    })
+
+    it('should set content tracking flags in display sections', () => {
+      const result = generateBashStatusline(detailedConfig)
+      
+      // Directory should set content_displayed
+      expect(result).toMatch(/printf.*📁.*\n.*content_displayed=1/s)
+      
+      // Model should set content_displayed  
+      expect(result).toMatch(/printf.*🤖.*\n.*content_displayed=1/s)
+    })
+
+    it('should have conditional newline based on content_displayed', () => {
+      const result = generateBashStatusline(allFeaturesConfig)
+      
+      expect(result).toContain('if [[ $content_displayed -eq 1 ]]')
+      expect(result).toContain('printf \'\\n\'')
+      expect(result).toContain('fi')
+    })
+
+    it('should not have unconditional newlines for compact mode', () => {
+      const compactConfig = { ...allFeaturesConfig, theme: 'compact' as const }
+      const result = generateBashStatusline(compactConfig)
+      
+      // Should have conditional newline only
+      expect(result).toContain('if [[ $content_displayed -eq 1 ]]')
+      
+      // Should have exactly one printf '\n' (the conditional one)
+      const newlinePrintfMatches = result.match(/printf\s+'\\n'/g)
+      expect(newlinePrintfMatches).toHaveLength(1)
+    })
+  })
 })

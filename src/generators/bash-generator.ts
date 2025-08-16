@@ -96,6 +96,8 @@ export function generateBashStatusline(config: StatuslineConfig): string {
     generateScriptHeader(config),
     config.logging ? generateLoggingCode() : '',
     'input=$(cat)',
+    generateRateLimitingCode(),
+    generateContentTrackingCode(),
     generateColorBashCode({ enabled: config.colors, theme: config.theme }),
     config.colors ? generateBasicColors() : '',
     hasUsage ? generateUsageUtilities() : '',
@@ -235,7 +237,8 @@ function generateDisplaySection(config: StatuslineConfig, gitConfig: any, usageC
         const dirColorPrefix = config.colors ? '$(dir_clr)' : ''
         const dirColorSuffix = config.colors ? '$(rst)' : ''
         displayCode += `
-printf '${dirEmoji} %s%s%s' "${dirColorPrefix}" "$cwd" "${dirColorSuffix}"`
+printf '${dirEmoji} %s%s%s' "${dirColorPrefix}" "$cwd" "${dirColorSuffix}"
+content_displayed=1`
         break
 
       case 'model':
@@ -243,7 +246,8 @@ printf '${dirEmoji} %s%s%s' "${dirColorPrefix}" "$cwd" "${dirColorSuffix}"`
         const modelColorPrefix = config.colors ? '$(model_clr)' : ''
         const modelColorSuffix = config.colors ? '$(rst)' : ''
         displayCode += `
-printf '  ${modelEmoji} %s%s%s' "${modelColorPrefix}" "$model_name" "${modelColorSuffix}"`
+printf '  ${modelEmoji} %s%s%s' "${modelColorPrefix}" "$model_name" "${modelColorSuffix}"
+content_displayed=1`
         break
 
       case 'git':
@@ -271,5 +275,39 @@ printf '  ${modelEmoji} %s%s%s' "${modelColorPrefix}" "$model_name" "${modelColo
     }
   }
 
+  // Add conditional newline at the end of all statuslines
+  displayCode += `
+# conditional newline (only if content was displayed)
+if [[ \$content_displayed -eq 1 ]]; then
+  printf '\\n'
+fi`
+
   return optimizeBashCode(displayCode)
+}
+
+function generateRateLimitingCode(): string {
+  return `
+# ---- rate limiting to prevent spam ----
+rate_limit_file="\${HOME}/.claude/statusline_rate_limit.tmp"
+current_time=\${EPOCHSECONDS:-\$(date +%s)}
+min_interval=0  # Minimum 100ms between executions (0 seconds for now, could be tuned)
+
+if [[ -f "\$rate_limit_file" ]]; then
+  last_time=\$(cat "\$rate_limit_file" 2>/dev/null || echo "0")
+  time_diff=\$(( current_time - last_time ))
+  if (( time_diff < min_interval )); then
+    # Too frequent, exit silently
+    exit 0
+  fi
+fi
+
+# Update rate limit timestamp
+mkdir -p "\${HOME}/.claude" 2>/dev/null
+echo "\$current_time" > "\$rate_limit_file" 2>/dev/null`
+}
+
+function generateContentTrackingCode(): string {
+  return `
+# ---- content tracking to prevent empty newlines ----
+content_displayed=0`
 }

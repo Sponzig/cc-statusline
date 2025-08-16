@@ -93,6 +93,7 @@ export function generateGitDisplayCode(config: GitFeature, colors: boolean, emoj
 # git display
 if [[ $git_branch ]]; then
   printf '  ${branchEmoji} %s%s%s' "${colorPrefix}" "$git_branch" "${colorSuffix}"
+  content_displayed=1
 fi`
 
   return optimizeBashCode(displayCode)

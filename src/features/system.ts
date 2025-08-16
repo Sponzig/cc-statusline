@@ -789,6 +789,7 @@ get_cpu_cores() {
 if [[ \$cpu_percent && \$cpu_percent != "0" ]]; then
   cpu_display=\$(format_cpu_with_status "\$cpu_percent" "${cpuThreshold}")
   printf '  ${cpuEmoji} %s%s%s' "\$(cpu_clr)" "\$cpu_display" "\$(rst)"
+  content_displayed=1
 fi`
   }
 
@@ -828,6 +829,7 @@ if [[ (\$cpu_percent && \$cpu_percent != "0") || (\$mem_total_gb && \$mem_total_
     
     displayCode += `
   printf '%s' "\$(rst)"
+  content_displayed=1
 fi`
   } else {
     // Original detailed/individual displays
