@@ -14,7 +14,7 @@ jobs:
   # Fast validation for immediate feedback
   quick-check:
     name: Quick Validation
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     if: github.event.pull_request.draft == false
     steps:
       - name: Checkout PR
@@ -46,7 +46,7 @@ jobs:
   # Detailed analysis and validation
   analysis:
     name: Code Analysis
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     if: github.event.pull_request.draft == false
     steps:
       - name: Checkout PR
@@ -156,7 +156,7 @@ jobs:
   # Test PR functionality
   functional-test:
     name: Functional Test
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     if: github.event.pull_request.draft == false
     steps:
       - name: Checkout PR
@@ -213,7 +213,7 @@ jobs:
   # Security and dependency check
   security-check:
     name: Security Review
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     if: github.event.pull_request.draft == false
     steps:
       - name: Checkout PR
@@ -254,7 +254,7 @@ jobs:
   # PR metadata and quality gates
   pr-quality:
     name: PR Quality Check
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     if: github.event.pull_request.draft == false
     steps:
       - name: Checkout PR
@@ -339,7 +339,7 @@ jobs:
 
   pr-summary:
     name: PR Summary
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     needs: [quick-check, analysis, functional-test, security-check, pr-quality, cross-platform-test]
     if: always() && github.event.pull_request.draft == false
     steps:
