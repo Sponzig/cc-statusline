@@ -287,27 +287,108 @@ fi`
 
 function generateRateLimitingCode(): string {
   return `
-# ---- rate limiting to prevent spam ----
+# ---- rate limiting and error recovery ----
 rate_limit_file="\${HOME}/.claude/statusline_rate_limit.tmp"
+error_log_file="\${HOME}/.claude/statusline_errors.log"
 current_time=\${EPOCHSECONDS:-\$(date +%s)}
 min_interval=0  # Minimum 100ms between executions (0 seconds for now, could be tuned)
 
+# Error recovery function
+handle_statusline_error() {
+  local error_msg="\$1"
+  local timestamp="\$(date '+%Y-%m-%d %H:%M:%S')"
+  
+  # Log error if debug mode or persistent errors
+  if [[ \$CC_STATUSLINE_DEBUG ]] || [[ -f "\$error_log_file" ]]; then
+    echo "[\$timestamp] Statusline error: \$error_msg" >> "\$error_log_file" 2>/dev/null
+  fi
+  
+  # Attempt terminal recovery
+  EMERGENCY_RESET 2>/dev/null || true
+  
+  # Exit with clean state
+  exit 1
+}
+
+# Set up error traps for comprehensive error handling
+trap 'handle_statusline_error "Unexpected termination"' ERR
+trap 'restore_terminal_state; exit 0' EXIT
+
+# Enhanced rate limiting with error recovery
 if [[ -f "\$rate_limit_file" ]]; then
-  last_time=\$(cat "\$rate_limit_file" 2>/dev/null || echo "0")
+  if ! last_time=\$(cat "\$rate_limit_file" 2>/dev/null); then
+    # File read error - recreate
+    mkdir -p "\${HOME}/.claude" 2>/dev/null
+    echo "0" > "\$rate_limit_file" 2>/dev/null || {
+      handle_statusline_error "Cannot write rate limit file"
+    }
+    last_time=0
+  fi
+  
   time_diff=\$(( current_time - last_time ))
   if (( time_diff < min_interval )); then
-    # Too frequent, exit silently
+    # Too frequent, exit silently but cleanly
+    restore_terminal_state 2>/dev/null || true
     exit 0
   fi
 fi
 
-# Update rate limit timestamp
-mkdir -p "\${HOME}/.claude" 2>/dev/null
-echo "\$current_time" > "\$rate_limit_file" 2>/dev/null`
+# Update rate limit timestamp with error handling
+mkdir -p "\${HOME}/.claude" 2>/dev/null || {
+  # Fallback to /tmp if home directory is not writable
+  rate_limit_file="/tmp/statusline_rate_limit_\${USER:-unknown}.tmp"
+}
+echo "\$current_time" > "\$rate_limit_file" 2>/dev/null || {
+  # If we can't write rate limiting file, continue but with warning
+  [[ \$CC_STATUSLINE_DEBUG ]] && echo "[WARNING] Rate limiting disabled - cannot write to \$rate_limit_file" >&2
+}`
 }
 
 function generateContentTrackingCode(): string {
   return `
-# ---- content tracking to prevent empty newlines ----
-content_displayed=0`
+# ---- content tracking and terminal safety ----
+content_displayed=0
+
+# Initialize terminal state preservation
+save_terminal_state 2>/dev/null || true
+
+# Validate terminal output capability
+validate_terminal_output() {
+  # Check if we can safely write to terminal
+  if [[ ! -t 1 ]]; then
+    # Not a terminal - skip color codes and complex formatting
+    use_color=0
+    return 0
+  fi
+  
+  # Test basic printf functionality
+  if ! printf "" 2>/dev/null; then
+    handle_statusline_error "Terminal output validation failed"
+    return 1
+  fi
+  
+  return 0
+}
+
+# Safe output function with error handling
+safe_printf() {
+  local format="\$1"
+  shift
+  
+  # Validate we can write to terminal
+  if ! validate_terminal_output; then
+    return 1
+  fi
+  
+  # Attempt printf with error recovery
+  if ! printf "\$format" "\$@" 2>/dev/null; then
+    handle_statusline_error "Output formatting failed"
+    return 1
+  fi
+  
+  return 0
+}
+
+# Run initial validation
+validate_terminal_output || exit 1`
 }

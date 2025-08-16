@@ -247,17 +247,20 @@ if [[ $sys_cached -eq 0 ]]; then
       # Fallback 1: vmstat method for systems where /proc/stat is unreliable
       if [[ \$linux_cpu_detected -eq 0 ]] && command -v vmstat >/dev/null 2>&1; then
         [[ \$CC_STATUSLINE_DEBUG ]] && echo "[DEBUG] Trying vmstat CPU detection" >&2
-        vmstat_output=\$(timeout 3s vmstat 1 2 2>/dev/null | tail -1)
-        if [[ \$vmstat_output ]]; then
-          cpu_idle=\$(echo "\$vmstat_output" | awk '{print \$15}' 2>/dev/null)
-          validated_idle=\$(validate_cpu_percent "\$cpu_idle")
-          if [[ \$validated_idle != "0" ]] || [[ \$cpu_idle == "0" ]]; then
-            raw_cpu_percent=\$((100 - validated_idle))
-            cpu_percent=\$(apply_cpu_bounds "\$raw_cpu_percent")
-            linux_cpu_detected=1
-            [[ \$CC_STATUSLINE_DEBUG ]] && echo "[DEBUG] vmstat CPU: \$cpu_percent% (idle: \$validated_idle%)" >&2
-          else
-            [[ \$CC_STATUSLINE_DEBUG ]] && echo "[DEBUG] vmstat CPU idle validation failed: '\$cpu_idle'" >&2
+        # Use safer subprocess execution with proper cleanup
+        if safe_system_cmd "vmstat 1 2 2>/dev/null | tail -1" 3; then
+          vmstat_output=\$(vmstat 1 2 2>/dev/null | tail -1)
+          if [[ \$vmstat_output ]]; then
+            cpu_idle=\$(echo "\$vmstat_output" | awk '{print \$15}' 2>/dev/null)
+            validated_idle=\$(validate_cpu_percent "\$cpu_idle")
+            if [[ \$validated_idle != "0" ]] || [[ \$cpu_idle == "0" ]]; then
+              raw_cpu_percent=\$((100 - validated_idle))
+              cpu_percent=\$(apply_cpu_bounds "\$raw_cpu_percent")
+              linux_cpu_detected=1
+              [[ \$CC_STATUSLINE_DEBUG ]] && echo "[DEBUG] vmstat CPU: \$cpu_percent% (idle: \$validated_idle%)" >&2
+            else
+              [[ \$CC_STATUSLINE_DEBUG ]] && echo "[DEBUG] vmstat CPU idle validation failed: '\$cpu_idle'" >&2
+            fi
           fi
         else
           [[ \$CC_STATUSLINE_DEBUG ]] && echo "[DEBUG] vmstat command failed or timed out" >&2
@@ -267,25 +270,27 @@ if [[ $sys_cached -eq 0 ]]; then
       # Fallback 2: top command for older systems
       if [[ \$linux_cpu_detected -eq 0 ]] && command -v top >/dev/null 2>&1; then
         [[ \$CC_STATUSLINE_DEBUG ]] && echo "[DEBUG] Trying top CPU detection" >&2
-        cpu_line=\$(timeout 5s top -bn1 2>/dev/null | grep "^%Cpu" | head -1)
-        if [[ \$cpu_line ]]; then
-          # Parse top CPU line (format varies by version)
-          raw_cpu_percent=\$(echo "\$cpu_line" | awk '{
-            # Look for patterns like: %Cpu(s):  5.2%us,  1.0%sy
-            if (match(\$0, /([0-9.]+)%[[:space:]]*us.*([0-9.]+)%[[:space:]]*sy/, arr)) {
-              user_pct = arr[1]; sys_pct = arr[2]
-              print int(user_pct + sys_pct + 0.5)  # Round to nearest int
-            }
-          }' 2>/dev/null)
-          cpu_percent=\$(apply_cpu_bounds "\$raw_cpu_percent")
-          if [[ \$cpu_percent != "0" ]] || [[ \$raw_cpu_percent == "0" ]]; then
-            linux_cpu_detected=1
-            [[ \$CC_STATUSLINE_DEBUG ]] && echo "[DEBUG] top CPU: \$cpu_percent% (raw: \$raw_cpu_percent%)" >&2
-          else
-            [[ \$CC_STATUSLINE_DEBUG ]] && echo "[DEBUG] top CPU validation failed: '\$raw_cpu_percent'" >&2
+        if safe_system_cmd "top -bn1 2>/dev/null | grep '^%Cpu' | head -1" 5; then
+          cpu_line=\$(top -bn1 2>/dev/null | grep "^%Cpu" | head -1)
+          if [[ \$cpu_line ]]; then
+            # Parse top CPU line (format varies by version)
+            raw_cpu_percent=\$(echo "\$cpu_line" | awk '{
+              # Look for patterns like: %Cpu(s):  5.2%us,  1.0%sy
+              if (match(\$0, /([0-9.]+)%[[:space:]]*us.*([0-9.]+)%[[:space:]]*sy/, arr)) {
+                user_pct = arr[1]; sys_pct = arr[2]
+                print int(user_pct + sys_pct + 0.5)  # Round to nearest int
+              }
+            }' 2>/dev/null)
+            cpu_percent=\$(apply_cpu_bounds "\$raw_cpu_percent")
+            if [[ \$cpu_percent != "0" ]] || [[ \$raw_cpu_percent == "0" ]]; then
+              linux_cpu_detected=1
+              [[ \$CC_STATUSLINE_DEBUG ]] && echo "[DEBUG] top CPU: \$cpu_percent% (raw: \$raw_cpu_percent%)" >&2
+            else
+              [[ \$CC_STATUSLINE_DEBUG ]] && echo "[DEBUG] top CPU validation failed: '\$raw_cpu_percent'" >&2
+            fi
           fi
         else
-          [[ \$CC_STATUSLINE_DEBUG ]] && echo "[DEBUG] top command failed or no CPU line found" >&2
+          [[ \$CC_STATUSLINE_DEBUG ]] && echo "[DEBUG] top command failed or timed out" >&2
         fi
       fi` : ''}${config.showRAM ? `
       
@@ -899,6 +904,59 @@ load_compare() {
     (( val_int > thresh_int )) && echo 1 || echo 0
   fi
 }
+
+# Safer subprocess execution with timeout and cleanup
+wait_with_timeout() {
+  local pid="\$1"
+  local timeout="\${2:-5}"
+  local count=0
+  
+  while (( count < timeout )); do
+    if ! kill -0 "\$pid" 2>/dev/null; then
+      # Process is done
+      return 0
+    fi
+    sleep 1
+    (( count++ ))
+  done
+  
+  # Timeout reached
+  return 1
+}
+
+# Execute system command with proper cleanup and error handling
+safe_system_cmd() {
+  local cmd="\$1"
+  local timeout="\${2:-3}"
+  local output=""
+  local pid=""
+  
+  # Start command in background
+  eval "\$cmd" &
+  pid=\$!
+  
+  # Wait with timeout
+  if wait_with_timeout "\$pid" "\$timeout"; then
+    wait "\$pid" 2>/dev/null
+    return 0
+  else
+    # Cleanup on timeout
+    kill -TERM "\$pid" 2>/dev/null
+    sleep 0.1
+    kill -KILL "\$pid" 2>/dev/null
+    return 1
+  fi
+}
+
+# Emergency cleanup function for system monitoring
+cleanup_system_processes() {
+  # Kill any hanging vmstat, top, or other system monitoring processes
+  pkill -f "vmstat.*statusline" 2>/dev/null || true
+  pkill -f "top.*statusline" 2>/dev/null || true
+}
+
+# Trap for emergency cleanup
+trap 'cleanup_system_processes' EXIT
 
 ${cacheManager.generateCacheInitCode()}`
 

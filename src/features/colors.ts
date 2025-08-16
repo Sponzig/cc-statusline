@@ -17,7 +17,7 @@ RST() { :; }
 `
   } else {
     bashCode = `
-# ---- color helpers (modern terminal-aware, respect NO_COLOR) ----
+# ---- color helpers (terminal-safe with focus preservation) ----
 use_color=1
 
 # Honor explicit environment variables
@@ -40,8 +40,45 @@ if (( use_color && ! FORCE_COLOR )); then
   esac
 fi
 
-C() { (( use_color )) && printf '\\033[%sm' "$1"; }
-RST() { (( use_color )) && printf '\\033[0m'; }
+# Terminal state preservation and safe ANSI sequence generation
+save_terminal_state() {
+  # Save cursor position and terminal attributes (if supported)
+  [[ $use_color -eq 1 ]] && printf '\\0337' 2>/dev/null || true
+}
+
+restore_terminal_state() {
+  # Restore cursor position and ensure clean state
+  [[ $use_color -eq 1 ]] && printf '\\0338\\033[0m' 2>/dev/null || true
+}
+
+# Safer color function with validation and error handling
+C() { 
+  if (( use_color )); then
+    # Validate input is a valid ANSI color code
+    local code="$1"
+    if [[ $code =~ ^[0-9]+(;[0-9]+)*$ ]]; then
+      printf '\\033[%sm' "$code" 2>/dev/null || true
+    fi
+  fi
+}
+
+# Enhanced reset function that ensures terminal cleanup
+RST() { 
+  if (( use_color )); then
+    # Use both specific reset and general reset for safety
+    printf '\\033[0m' 2>/dev/null || true
+    # Additional cleanup for certain terminals
+    printf '\\033[?25h' 2>/dev/null || true  # Ensure cursor is visible
+  fi
+}
+
+# Emergency terminal reset function (for error recovery)
+EMERGENCY_RESET() {
+  printf '\\033[0m\\033[?25h\\033[2J\\033[H' 2>/dev/null || true
+}
+
+# Trap to ensure terminal state is restored on any exit
+trap 'restore_terminal_state' EXIT INT TERM
 `
   }
 
@@ -50,11 +87,11 @@ RST() { (( use_color )) && printf '\\033[0m'; }
 
 export function generateBasicColors(): string {
   const bashCode = `
-# ---- basic colors ----
-dir_clr() { (( use_color )) && printf '\\033[1;36m'; }    # cyan
-model_clr() { (( use_color )) && printf '\\033[1;35m'; }  # magenta  
-ver_clr() { (( use_color )) && printf '\\033[1;33m'; } # yellow
-rst() { (( use_color )) && printf '\\033[0m'; }
+# ---- basic colors (terminal-safe) ----
+dir_clr() { C '1;36'; }    # cyan
+model_clr() { C '1;35'; }  # magenta  
+ver_clr() { C '1;33'; }    # yellow
+rst() { RST; }
 `
 
   return optimizeBashCode(bashCode)

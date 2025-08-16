@@ -13,10 +13,14 @@ describe('generateColorBashCode', () => {
     const result = generateColorBashCode(config)
     
     expect(result).toContain('use_color=1')
-    expect(result).toContain('C() { (( use_color )) && printf \'\\033[%sm\' "$1"; }')
-    expect(result).toContain('RST() { (( use_color )) && printf \'\\033[0m\'; }')
+    expect(result).toContain('# Safer color function with validation')
+    expect(result).toContain('C() {')
+    expect(result).toContain('RST() {')
     expect(result).toContain('NO_COLOR')
     expect(result).toContain('FORCE_COLOR')
+    expect(result).toContain('EMERGENCY_RESET')
+    expect(result).toContain('save_terminal_state')
+    expect(result).toContain('restore_terminal_state')
   })
 
   it('should generate disabled color helpers when disabled', () => {
@@ -51,26 +55,23 @@ describe('generateColorBashCode', () => {
 })
 
 describe('generateBasicColors', () => {
-  it('should generate basic color functions', () => {
+  it('should generate basic color functions using safe C() helper', () => {
     const result = generateBasicColors()
     
-    expect(result).toContain('dir_clr() { (( use_color )) && printf \'\\033[1;36m\'; }')
-    expect(result).toContain('model_clr() { (( use_color )) && printf \'\\033[1;35m\'; }')
-    expect(result).toContain('ver_clr() { (( use_color )) && printf \'\\033[1;33m\'; }')
-    expect(result).toContain('rst() { (( use_color )) && printf \'\\033[0m\'; }')
+    expect(result).toContain('dir_clr() { C \'1;36\'; }')
+    expect(result).toContain('model_clr() { C \'1;35\'; }')
+    expect(result).toContain('ver_clr() { C \'1;33\'; }')
+    expect(result).toContain('rst() { RST; }')
   })
 
-  it('should use ANSI color codes', () => {
+  it('should use safe color code patterns', () => {
     const result = generateBasicColors()
     
-    // Check for cyan (1;36m)
-    expect(result).toContain('\\033[1;36m')
-    // Check for magenta (1;35m)
-    expect(result).toContain('\\033[1;35m')
-    // Check for yellow (1;33m)
-    expect(result).toContain('\\033[1;33m')
-    // Check for reset (0m)
-    expect(result).toContain('\\033[0m')
+    // Check for color codes passed to C() function
+    expect(result).toContain('1;36')  // cyan
+    expect(result).toContain('1;35')  // magenta
+    expect(result).toContain('1;33')  // yellow
+    expect(result).toContain('terminal-safe')
   })
 })
 

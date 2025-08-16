@@ -35,12 +35,13 @@ describe('Content Tracking and Rate Limiting', () => {
     it('should include rate limiting code in generated script', () => {
       const result = generateBashStatusline(minimalConfig)
       
-      expect(result).toContain('# ---- rate limiting to prevent spam ----')
+      expect(result).toContain('# ---- rate limiting and error recovery ----')
       expect(result).toContain('rate_limit_file=')
       expect(result).toContain('current_time=')
       expect(result).toContain('min_interval=')
       expect(result).toContain('time_diff=')
       expect(result).toContain('exit 0')
+      expect(result).toContain('handle_statusline_error')
     })
 
     it('should include rate limit file path', () => {
@@ -75,7 +76,7 @@ describe('Content Tracking and Rate Limiting', () => {
     it('should include content tracking initialization', () => {
       const result = generateBashStatusline(minimalConfig)
       
-      expect(result).toContain('# ---- content tracking to prevent empty newlines ----')
+      expect(result).toContain('# ---- content tracking and terminal safety ----')
       expect(result).toContain('content_displayed=0')
     })
 
@@ -143,11 +144,11 @@ describe('Content Tracking and Rate Limiting', () => {
       const result = generateBashStatusline(allFeaturesConfig)
       
       // Should have rate limiting
-      expect(result).toContain('# ---- rate limiting to prevent spam ----')
+      expect(result).toContain('# ---- rate limiting and error recovery ----')
       expect(result).toContain('rate_limit_file=')
       
       // Should have content tracking
-      expect(result).toContain('# ---- content tracking to prevent empty newlines ----')
+      expect(result).toContain('# ---- content tracking and terminal safety ----')
       expect(result).toContain('content_displayed=0')
       
       // Should have conditional newline
@@ -157,8 +158,8 @@ describe('Content Tracking and Rate Limiting', () => {
     it('should ensure rate limiting comes before content tracking', () => {
       const result = generateBashStatusline(minimalConfig)
       
-      const rateLimitingIndex = result.indexOf('# ---- rate limiting to prevent spam ----')
-      const contentTrackingIndex = result.indexOf('# ---- content tracking to prevent empty newlines ----')
+      const rateLimitingIndex = result.indexOf('# ---- rate limiting and error recovery ----')
+      const contentTrackingIndex = result.indexOf('# ---- content tracking and terminal safety ----')
       
       expect(rateLimitingIndex).toBeGreaterThan(-1)
       expect(contentTrackingIndex).toBeGreaterThan(-1)

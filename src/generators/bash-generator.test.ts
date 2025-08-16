@@ -214,7 +214,7 @@ describe('generateBashStatusline', () => {
     it('should include rate limiting helper functions', () => {
       const result = generateBashStatusline(minimalConfig)
       
-      expect(result).toContain('# ---- rate limiting to prevent spam ----')
+      expect(result).toContain('# ---- rate limiting and error recovery ----')
       expect(result).toContain('rate_limit_file=')
       expect(result).toContain('min_interval=')
     })
@@ -222,7 +222,7 @@ describe('generateBashStatusline', () => {
     it('should include content tracking helper functions', () => {
       const result = generateBashStatusline(minimalConfig)
       
-      expect(result).toContain('# ---- content tracking to prevent empty newlines ----')
+      expect(result).toContain('# ---- content tracking and terminal safety ----')
       expect(result).toContain('content_displayed=0')
     })
 

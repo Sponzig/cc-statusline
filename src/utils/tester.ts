@@ -593,14 +593,68 @@ function simulateMissingTools(script: string, scenario: string): string {
 async function executeScript(scriptPath: string, input: string): Promise<{ success: boolean, output: string, error?: string }> {
   return new Promise((resolve) => {
     let isResolved = false
+    let timeoutId: NodeJS.Timeout | null = null
     
     const process = spawn('bash', [scriptPath], {
       stdio: ['pipe', 'pipe', 'pipe'],
-      timeout: 5000 // Built-in timeout
+      // Remove built-in timeout to handle it manually for better control
+      detached: false, // Ensure process stays in same process group
+      killSignal: 'SIGTERM' // Use gentler signal by default
     })
     
     let stdout = ''
     let stderr = ''
+    
+    // Helper function for graceful cleanup
+    const gracefulCleanup = (reason: string, code?: number) => {
+      if (isResolved) return
+      isResolved = true
+      
+      if (timeoutId) {
+        clearTimeout(timeoutId)
+        timeoutId = null
+      }
+      
+      const stderrTrimmed = stderr.trim()
+      resolve({
+        success: code === 0,
+        output: stdout.trim(),
+        ...(stderrTrimmed && { error: stderrTrimmed }),
+        ...(reason && !stderrTrimmed && { error: reason })
+      })
+    }
+    
+    // Enhanced timeout management with escalating signals
+    const startGracefulTimeout = () => {
+      let attemptCount = 0
+      
+      const attemptTermination = () => {
+        if (isResolved) return
+        
+        attemptCount++
+        
+        switch (attemptCount) {
+          case 1:
+            // First attempt: SIGTERM (graceful)
+            process.kill('SIGTERM')
+            timeoutId = setTimeout(attemptTermination, 1000) // Wait 1s
+            break
+          case 2:
+            // Second attempt: SIGINT (interrupt)
+            process.kill('SIGINT')
+            timeoutId = setTimeout(attemptTermination, 1000) // Wait 1s
+            break
+          case 3:
+            // Final attempt: SIGKILL (force kill)
+            process.kill('SIGKILL')
+            gracefulCleanup('Script execution timed out - process terminated', 1)
+            break
+        }
+      }
+      
+      // Start timeout sequence after 5 seconds
+      timeoutId = setTimeout(attemptTermination, 5000)
+    }
     
     process.stdout.on('data', (data) => {
       stdout += data.toString()
@@ -611,63 +665,40 @@ async function executeScript(scriptPath: string, input: string): Promise<{ succe
     })
     
     process.on('close', (code, signal) => {
-      if (!isResolved) {
-        isResolved = true
-        const stderrTrimmed = stderr.trim()
-        resolve({
-          success: code === 0 && !signal,
-          output: stdout.trim(),
-          ...(stderrTrimmed && { error: stderrTrimmed }),
-          ...(signal && { error: `Process killed by signal: ${signal}` })
-        })
-      }
+      gracefulCleanup(
+        signal ? `Process terminated by signal: ${signal}` : '',
+        code || 0
+      )
     })
     
     process.on('error', (err) => {
-      if (!isResolved) {
-        isResolved = true
-        resolve({
-          success: false,
-          output: stdout.trim(),
-          error: err.message
-        })
-      }
+      gracefulCleanup(`Process error: ${err.message}`, 1)
     })
     
-    // Send input and close stdin immediately
+    // Send input and close stdin with better error handling
     try {
       if (process.stdin && process.stdin.writable) {
-        process.stdin.write(input)
-        process.stdin.end()
+        process.stdin.write(input, 'utf8', (err) => {
+          if (err && !isResolved) {
+            gracefulCleanup(`Failed to write to stdin: ${err.message}`, 1)
+            return
+          }
+          process.stdin.end()
+        })
+      } else {
+        gracefulCleanup('Process stdin is not writable', 1)
+        return
       }
     } catch (err) {
-      if (!isResolved) {
-        isResolved = true
-        resolve({
-          success: false,
-          output: '',
-          error: `Failed to write to stdin: ${err instanceof Error ? err.message : String(err)}`
-        })
-      }
+      gracefulCleanup(
+        `Failed to write to stdin: ${err instanceof Error ? err.message : String(err)}`,
+        1
+      )
+      return
     }
     
-    // Backup timeout with force kill
-    const timeoutId = setTimeout(() => {
-      if (!isResolved) {
-        isResolved = true
-        process.kill('SIGKILL')
-        resolve({
-          success: false,
-          output: stdout.trim(),
-          error: 'Script execution timed out (5s) - force killed'
-        })
-      }
-    }, 5000)
-    
-    // Clear timeout if process ends normally
-    process.on('close', () => {
-      clearTimeout(timeoutId)
-    })
+    // Start the graceful timeout mechanism
+    startGracefulTimeout()
   })
 }
 
