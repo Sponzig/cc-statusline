@@ -18,8 +18,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          autocrlf: false
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -53,8 +51,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          autocrlf: false
 
       - name: Setup Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v4
@@ -96,8 +92,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          autocrlf: false
 
       - name: Setup Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v4
@@ -134,8 +128,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          autocrlf: false
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -150,11 +142,12 @@ jobs:
         run: npm run test:coverage
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
+          slug: Sponzig/cc-statusline
           files: ./coverage/coverage-final.json
-          fail_ci_if_error: true
+          fail_ci_if_error: false
           verbose: true
 
       - name: Upload coverage artifacts
@@ -190,7 +183,7 @@ jobs:
           node dist/index.js --help
           
           # Test init command (dry run)
-          node dist/index.js init --output ./test-statusline.sh --no-install
+          node dist/index.js init --output ./test-statusline.sh --no-install --defaults
           test -f ./test-statusline.sh
           
           # Test preview command
@@ -208,7 +201,7 @@ jobs:
           cc-statusline --help
           
           # Test init command works globally
-          cc-statusline init --output ./global-test-statusline.sh --no-install
+          cc-statusline init --output ./global-test-statusline.sh --no-install --defaults
           test -f ./global-test-statusline.sh
 
   security:

@@ -1,4 +1,4 @@
-import { collectConfiguration } from './prompts.js'
+import { collectConfiguration, getDefaultConfiguration } from './prompts.js'
 import { generateBashStatusline } from '../generators/bash-generator.js'
 import { validateConfig } from '../utils/validator.js'
 import chalk from 'chalk'
@@ -8,6 +8,7 @@ import path from 'path'
 interface InitOptions {
   output?: string
   install?: boolean
+  defaults?: boolean
 }
 
 export async function initCommand(options: InitOptions): Promise<void> {
@@ -17,7 +18,9 @@ export async function initCommand(options: InitOptions): Promise<void> {
     spinner.stop()
 
     // Collect user configuration
-    const config = await collectConfiguration()
+    const config = options.defaults 
+      ? getDefaultConfiguration()
+      : await collectConfiguration()
     
     // Validate configuration
     const validation = validateConfig(config)
