@@ -1,6 +1,5 @@
 import { vi, beforeEach } from 'vitest'
 import path from 'path'
-import os from 'os'
 
 // Create mock functions with default implementations
 const mockMkdir = vi.fn().mockResolvedValue(undefined)
