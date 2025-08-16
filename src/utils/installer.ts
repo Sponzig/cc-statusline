@@ -1,13 +1,22 @@
-import { StatuslineConfig } from '../cli/prompts.js'
 import { promises as fs } from 'fs'
 import path from 'path'
 
 export async function installStatusline(
   script: string,
-  outputPath: string,
-  config: StatuslineConfig
+  outputPath: string
 ): Promise<void> {
   try {
+    // Safety check: prevent tests from overwriting project files
+    const absolutePath = path.resolve(outputPath)
+    const currentDir = process.cwd()
+    
+    // If this is a test environment and the path is in the current project directory, throw error
+    if (process.env.NODE_ENV === 'test' || process.env.VITEST === 'true') {
+      if (absolutePath.startsWith(currentDir) && outputPath.includes('.claude/statusline.sh')) {
+        throw new Error(`Test safety check: Refusing to overwrite project statusline at ${absolutePath}`)
+      }
+    }
+    
     // Ensure the directory exists
     const dir = path.dirname(outputPath)
     await fs.mkdir(dir, { recursive: true })
@@ -69,7 +78,7 @@ export async function checkClaudeCodeSetup(): Promise<{
     const dirExists = await fs.access(claudeDir).then(() => true).catch(() => false)
     const settingsExists = await fs.access(settingsPath).then(() => true).catch(() => false)
     
-    let currentStatusline: string | undefined
+    let currentStatusline: string | undefined = undefined
     
     if (settingsExists) {
       try {
@@ -83,7 +92,7 @@ export async function checkClaudeCodeSetup(): Promise<{
     return {
       hasClaudeDir: dirExists,
       hasSettings: settingsExists,
-      currentStatusline
+      ...(currentStatusline !== undefined && { currentStatusline })
     }
   } catch {
     return {

@@ -38,8 +38,8 @@ export const COMPACT_VARIABLES = {
   
   // Cache variables
   'cache_file_path': 'cache_file',
-  'cached_result': 'cached',
-  'fresh_result': 'fresh',
+  // 'cached_result': 'cached', // DISABLED: Breaking cache manager functionality
+  // 'fresh_result': 'fresh', // DISABLED: Breaking cache manager functionality
   'use_cache_flag': 'use_cache',
   
   // Color variables
@@ -117,10 +117,20 @@ export function applyBuiltinReplacements(bashCode: string, options: Optimization
   
   let optimized = bashCode
   
+  // Apply specific bash test optimizations first (these are the main ones we want to test)
+  optimized = optimized
+    // Replace [ -n "$var" ] with [[ $var ]] (avoid matching double brackets)
+    .replace(/(?<!\[)\[ -n "\$([^"]+)" \]/g, '[[ $$$1 ]]')
+    // Replace [ -z "$var" ] with [[ ! $var ]] (avoid matching double brackets)
+    .replace(/(?<!\[)\[ -z "\$([^"]+)" \]/g, '[[ ! $$$1 ]]')
+    // Replace [ -n $var ] with [[ $var ]] (avoid matching double brackets)
+    .replace(/(?<!\[)\[ -n \$([^\s\]]+) \]/g, '[[ $$$1 ]]')
+    // Replace [ -z $var ] with [[ ! $var ]] (avoid matching double brackets)
+    .replace(/(?<!\[)\[ -z \$([^\s\]]+) \]/g, '[[ ! $$$1 ]]')
+  
+  // Apply direct pattern replacements using string replacement for exact matches
   for (const [pattern, replacement] of Object.entries(BUILTIN_REPLACEMENTS)) {
-    // Escape special regex characters in pattern
-    const escapedPattern = pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-    optimized = optimized.replace(new RegExp(escapedPattern, 'g'), replacement)
+    optimized = optimized.split(pattern).join(replacement)
   }
   
   return optimized
@@ -188,10 +198,10 @@ export function combinePipeOperations(bashCode: string, options: OptimizationOpt
  */
 export function optimizeBashCode(bashCode: string, options: OptimizationOptions = {}): string {
   const defaultOptions: OptimizationOptions = {
-    compactVariables: true,
-    useBuiltins: true,
-    reduceSubshells: true,
-    combinePipes: true,
+    compactVariables: false, // DISABLED: Causing corruption
+    useBuiltins: true, // ENABLED: Safe builtin replacements 
+    reduceSubshells: false,
+    combinePipes: false,
     ...options
   }
   
@@ -200,47 +210,40 @@ export function optimizeBashCode(bashCode: string, options: OptimizationOptions 
   const optimizationSteps: Array<{ name: string, code: string }> = []
   
   try {
-    // Apply optimizations step by step with rollback capability
+    // Apply ONLY safe optimizations that preserve bash script structure
     
-    // Step 1: Compact variables
+    // Step 1: Compact variables (safe)
     if (defaultOptions.compactVariables) {
       const stepResult = applyCompactVariables(optimized, defaultOptions)
-      // Temporarily disable validation checks - only proceed if no critical errors
       optimized = stepResult
       optimizationSteps.push({ name: 'compactVariables', code: optimized })
     }
     
-    // Step 2: Builtin replacements  
+    // Step 2: Builtin replacements (safe)
     if (defaultOptions.useBuiltins) {
       const stepResult = applyBuiltinReplacements(optimized, defaultOptions)
-      // Temporarily disable validation checks
       optimized = stepResult
       optimizationSteps.push({ name: 'builtinReplacements', code: optimized })
     }
     
-    // Step 3: Reduce subshells
+    // Step 3: Reduce subshells (disabled - can be risky)
     if (defaultOptions.reduceSubshells) {
       const stepResult = reduceSubshells(optimized, defaultOptions)
-      // Temporarily disable validation checks
       optimized = stepResult
       optimizationSteps.push({ name: 'reduceSubshells', code: optimized })
     }
     
-    // Step 4: Combine pipe operations
+    // Step 4: Combine pipe operations (disabled - can be risky)
     if (defaultOptions.combinePipes) {
       const stepResult = combinePipeOperations(optimized, defaultOptions)
-      // Temporarily disable validation checks
       optimized = stepResult
       optimizationSteps.push({ name: 'combinePipeOperations', code: optimized })
     }
     
-    // Final validation - log issues but don't block optimizations
-    const finalValidation = validateOptimizations(original, optimized)
-    
-    if (!finalValidation.isValid) {
-      // Log validation issues for debugging but don't roll back
-      console.warn(`[OPTIMIZER] Validation issues detected (ignored): ${finalValidation.issues.join(', ')}`)
-    }
+    // Only safe whitespace cleanup: remove excessive blank lines but preserve structure
+    optimized = optimized
+      .replace(/\n\s*\n\s*\n+/g, '\n\n')  // Remove excessive blank lines
+      .replace(/^\s+$/gm, '')              // Remove lines with only whitespace
     
     return optimized
     
@@ -273,14 +276,14 @@ export function optimizeVariableDeclarations(bashCode: string): string {
 export function getOptimizationStats(original: string, optimized: string) {
   const originalSize = original.length
   const optimizedSize = optimized.length
-  const reduction = originalSize - optimizedSize
-  const reductionPercent = ((reduction / originalSize) * 100).toFixed(1)
+  const bytesReduced = originalSize - optimizedSize
+  const reductionPercent = originalSize > 0 ? ((bytesReduced / originalSize) * 100) : 0
   
   return {
     originalSize,
     optimizedSize,
-    reduction,
-    reductionPercent: parseFloat(reductionPercent),
+    bytesReduced,
+    reductionPercent: Math.round(reductionPercent * 10) / 10, // Round to 1 decimal
     compressionRatio: (optimizedSize / originalSize).toFixed(3)
   }
 }
@@ -299,7 +302,7 @@ export function validateOptimizations(original: string, optimized: string): { is
   if (systemValidationResult.issues.length > 0) {
     issues.push(...systemValidationResult.issues)
     if (systemValidationResult.severity === 'high') maxSeverity = 'high'
-    else if (systemValidationResult.severity === 'medium' && maxSeverity !== 'high') maxSeverity = 'medium'
+    else if (systemValidationResult.severity === 'medium' && maxSeverity === 'low') maxSeverity = 'medium'
   }
   
   // 2. Variable reference validation with enhanced checking
@@ -307,7 +310,7 @@ export function validateOptimizations(original: string, optimized: string): { is
   if (variableValidationResult.issues.length > 0) {
     issues.push(...variableValidationResult.issues)
     if (variableValidationResult.severity === 'high') maxSeverity = 'high'
-    else if (variableValidationResult.severity === 'medium' && maxSeverity !== 'high') maxSeverity = 'medium'
+    else if (variableValidationResult.severity === 'medium' && maxSeverity === 'low') maxSeverity = 'medium'
   }
   
   // 3. Syntax and structure validation
@@ -315,7 +318,7 @@ export function validateOptimizations(original: string, optimized: string): { is
   if (syntaxValidationResult.issues.length > 0) {
     issues.push(...syntaxValidationResult.issues)
     if (syntaxValidationResult.severity === 'high') maxSeverity = 'high'
-    else if (syntaxValidationResult.severity === 'medium' && maxSeverity !== 'high') maxSeverity = 'medium'
+    else if (syntaxValidationResult.severity === 'medium' && maxSeverity === 'low') maxSeverity = 'medium'
   }
   
   // 4. Performance impact validation
@@ -413,13 +416,14 @@ function validateVariableReferences(original: string, optimized: string): { issu
   
   // Check if we lost any essential variables (allowing for renames via COMPACT_VARIABLES)
   const compactMap = Object.values(COMPACT_VARIABLES)
-  const missingVars = originalVars.filter(varName => 
-    !optimizedVars.includes(varName) && 
-    !compactMap.includes(COMPACT_VARIABLES[varName as keyof typeof COMPACT_VARIABLES])
-  )
+  const missingVars = originalVars.filter(varName => {
+    const compactVar = COMPACT_VARIABLES[varName as keyof typeof COMPACT_VARIABLES]
+    return !optimizedVars.includes(varName) && 
+           (!compactVar || !compactMap.includes(compactVar))
+  })
   
   if (missingVars.length > 0) {
-    const nonCriticalMissing = missingVars.filter(v => !criticalVars.includes(v))
+    const nonCriticalMissing = missingVars.filter(v => v && !criticalVars.includes(v))
     if (nonCriticalMissing.length > 0) {
       issues.push(`Non-critical variable declarations removed: ${nonCriticalMissing.join(', ')}`)
       severity = severity === 'low' ? 'medium' : severity

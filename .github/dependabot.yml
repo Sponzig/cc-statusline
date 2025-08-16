@@ -1,0 +1,90 @@
+version: 2
+updates:
+  # NPM dependencies
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "04:00"
+      timezone: "UTC"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "Sponzig"
+    assignees:
+      - "Sponzig"
+    commit-message:
+      prefix: "chore(deps)"
+      prefix-development: "chore(deps-dev)"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "automated"
+    # Group patch and minor updates together
+    groups:
+      development-dependencies:
+        patterns:
+          - "@types/*"
+          - "@vitest/*"
+          - "typescript"
+          - "tsup"
+          - "vitest"
+        update-types:
+          - "minor"
+          - "patch"
+      production-dependencies:
+        patterns:
+          - "chalk"
+          - "commander"
+          - "inquirer"
+          - "ora"
+        update-types:
+          - "patch"
+    # Auto-merge rules for trusted updates
+    allow:
+      - dependency-type: "direct:production"
+        update-type: "version-update:semver-patch"
+      - dependency-type: "direct:development"
+        update-type: "version-update:semver-minor"
+      - dependency-type: "direct:development"
+        update-type: "version-update:semver-patch"
+      - dependency-type: "indirect"
+        update-type: "version-update:semver-patch"
+    # Ignore specific packages that need manual review
+    ignore:
+      # Ignore major version updates for core dependencies
+      - dependency-name: "node"
+        update-types: ["version-update:semver-major"]
+      # Pin inquirer to v9.x due to ESM compatibility
+      - dependency-name: "inquirer"
+        update-types: ["version-update:semver-major"]
+
+  # GitHub Actions dependencies
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "04:30"
+      timezone: "UTC"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "Sponzig"
+    assignees:
+      - "Sponzig"
+    commit-message:
+      prefix: "chore(actions)"
+      include: "scope"
+    labels:
+      - "github-actions"
+      - "automated"
+    # Group all GitHub Actions updates
+    groups:
+      github-actions:
+        patterns:
+          - "actions/*"
+          - "codecov/*"
+        update-types:
+          - "major"
+          - "minor"
+          - "patch"

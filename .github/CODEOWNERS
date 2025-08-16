@@ -1,0 +1,30 @@
+# Global ownership
+# These owners will be requested for review on all PRs
+* @Sponzig
+
+# Critical files that require owner review
+package.json @Sponzig
+package-lock.json @Sponzig
+tsconfig.json @Sponzig
+tsup.config.ts @Sponzig
+
+# GitHub configuration
+.github/ @Sponzig
+.github/workflows/ @Sponzig
+.github/dependabot.yml @Sponzig
+
+# Core source code
+src/index.ts @Sponzig
+src/cli/ @Sponzig
+src/generators/ @Sponzig
+
+# Security and build configuration
+vitest.config.ts @Sponzig
+.gitignore @Sponzig
+.npmignore @Sponzig
+
+# Documentation
+README.md @Sponzig
+CLAUDE.md @Sponzig
+CHANGELOG.md @Sponzig
+LICENSE @Sponzig

@@ -13,6 +13,10 @@ tsup.config.ts
 examples/
 docs/
 
+# Explicitly include important files
+!README.md
+!LICENSE
+
 # Build artifacts not needed
 *.tsbuildinfo
 .eslintcache

@@ -14,6 +14,7 @@ program
   .description('Create a custom statusline with interactive prompts')
   .option('-o, --output <path>', 'Output path for statusline.sh', './.claude/statusline.sh')
   .option('--no-install', 'Don\'t automatically install to .claude/statusline.sh')
+  .option('--defaults', 'Use default configuration without prompts')
   .action(initCommand)
 
 program

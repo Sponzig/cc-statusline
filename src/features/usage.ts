@@ -121,7 +121,7 @@ cache_efficiency="" cache_savings="" context_usage_pct=""
 proj_cost_txt="" proj_time_txt="" efficiency_alert=""
 
 if command -v jq >/dev/null 2>&1; then
-${cacheManager.generateFileCacheCode('ccusage', 'ccusage blocks --json 2>/dev/null || timeout 3 npx ccusage@latest blocks --json 2>/dev/null')}
+${cacheManager.generateFileCacheCode('ccusage', 'ccusage blocks --json 2>/dev/null || timeout 5 npx ccusage@latest blocks --json 2>/dev/null')}
   
   if [[ $cached_result ]]; then
     blocks_output="$cached_result"

@@ -16,6 +16,18 @@ export interface StatuslineConfig {
   }
 }
 
+export function getDefaultConfiguration(): StatuslineConfig {
+  return {
+    features: ['directory', 'git', 'model', 'usage'],
+    runtime: 'bash',
+    colors: true,
+    theme: 'detailed',
+    ccusageIntegration: true,
+    logging: false,
+    customEmojis: false
+  }
+}
+
 export async function collectConfiguration(): Promise<StatuslineConfig> {
   console.log('🚀 Welcome to cc-statusline! Let\'s create your custom Claude Code statusline.\n')
 

@@ -1,6 +1,6 @@
 {
-  "name": "@chongdashu/cc-statusline",
-  "version": "1.0.2",
+  "name": "@sponzig/cc-statusline",
+  "version": "2.0.1",
   "description": "Interactive CLI tool for generating custom Claude Code statuslines",
   "type": "module",
   "main": "dist/index.js",
@@ -11,14 +11,19 @@
     "build": "tsup",
     "dev": "tsup --watch",
     "start": "node dist/index.js",
-    "test": "npm run build && node dist/test.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "test:unit": "vitest run --testNamePattern='(?!integration)'",
+    "test:integration": "vitest run --testNamePattern='integration'",
+    "test:legacy": "npm run build && node dist/test.js",
     "prepublishOnly": "npm run build"
   },
   "keywords": [
     "claude-code",
     "claude",
     "statusline",
-    "status-line", 
+    "status-line",
     "cli",
     "terminal",
     "productivity",
@@ -27,32 +32,33 @@
     "ai-tools"
   ],
   "author": {
-    "name": "Chong-U",
-    "email": "chong-u@aioriented.dev",
-    "url": "https://github.com/chongdashu"
+    "name": "Sponzig",
+    "url": "https://github.com/Sponzig"
   },
   "license": "MIT",
   "dependencies": {
+    "chalk": "^5.3.0",
     "commander": "^11.1.0",
     "inquirer": "^9.2.12",
-    "chalk": "^5.3.0",
     "ora": "^7.0.1"
   },
   "devDependencies": {
     "@types/inquirer": "^9.0.7",
-    "@types/node": "^20.10.5",
+    "@types/node": "^20.19.11",
+    "@vitest/coverage-v8": "^3.2.4",
     "tsup": "^8.0.1",
-    "typescript": "^5.3.3"
+    "typescript": "^5.3.3",
+    "vitest": "^3.2.4"
   },
   "engines": {
-    "node": ">=16.0.0"
+    "node": ">=18.0.0"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/chongdashu/cc-statusline.git"
+    "url": "git+https://github.com/Sponzig/cc-statusline.git"
   },
   "bugs": {
-    "url": "https://github.com/chongdashu/cc-statusline/issues"
+    "url": "https://github.com/Sponzig/cc-statusline/issues"
   },
-  "homepage": "https://github.com/chongdashu/cc-statusline#readme"
+  "homepage": "https://github.com/Sponzig/cc-statusline#readme"
 }
