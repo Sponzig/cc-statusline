@@ -11,6 +11,6 @@ export default defineConfig({
   banner: {
     js: '#!/usr/bin/env node'
   },
-  target: 'node16',
+  target: 'node18',
   outDir: 'dist'
 })

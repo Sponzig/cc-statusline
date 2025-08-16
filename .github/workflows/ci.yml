@@ -14,7 +14,7 @@ concurrency:
 jobs:
   quality:
     name: Code Quality
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -42,24 +42,61 @@ jobs:
           test -x dist/index.js
           head -n 1 dist/index.js | grep -q "#!/usr/bin/env node"
 
-  test:
-    name: Test (Node ${{ matrix.node-version }}, ${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
+  test-fast:
+    name: Fast Test (Node ${{ matrix.node-version }})
+    runs-on: self-hosted
     strategy:
       fail-fast: false
       matrix:
-        node-version: [16, 18, 20, 22]
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        exclude:
-          # Skip Node 16 on Windows due to EOL
-          - node-version: 16
-            os: windows-latest
+        node-version: [18, 20, 22]
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          # Ensure consistent line endings
+          autocrlf: false
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      - name: Configure Git
+        run: |
+          git config --global core.autocrlf false
+          git config --global core.eol lf
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run unit tests
+        run: npm run test:unit
+
+      - name: Run integration tests
+        run: npm run test:integration
+
+      - name: Upload test results
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-fast-${{ matrix.node-version }}
+          path: test-results/
+          retention-days: 7
+
+  test-cross-platform:
+    name: Cross-Platform Test (Node ${{ matrix.node-version }}, ${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [20]  # Latest stable for cross-platform testing
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
           autocrlf: false
 
       - name: Setup Node.js ${{ matrix.node-version }}
@@ -93,7 +130,7 @@ jobs:
 
   coverage:
     name: Test Coverage
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -129,7 +166,7 @@ jobs:
 
   functional:
     name: Functional Tests
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     needs: [quality]
     steps:
       - name: Checkout
@@ -176,7 +213,7 @@ jobs:
 
   security:
     name: Security Audit
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -204,8 +241,8 @@ jobs:
 
   build-artifacts:
     name: Build Artifacts
-    runs-on: ubuntu-latest
-    needs: [quality, test, coverage]
+    runs-on: self-hosted
+    needs: [quality, test-fast, test-cross-platform, coverage]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
       - name: Checkout
