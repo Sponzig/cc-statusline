@@ -7,6 +7,7 @@ import {
   systemMonitoringConfig,
   allFeaturesConfig 
 } from '../__tests__/fixtures/mock-configs.js'
+import { testUtils } from '../__tests__/setup.js'
 
 // Mock the cache manager to avoid file system operations in tests
 vi.mock('../utils/cache-manager.js', () => ({
@@ -180,7 +181,7 @@ describe('generateBashStatusline', () => {
     const result2 = generateBashStatusline(minimalConfig)
     
     // Results should be identical (excluding timestamp in header)
-    const normalize = (script: string) => script.replace(/Created: .*/, 'Created: [timestamp]')
+    const normalize = (script: string) => testUtils.normalizeString(script.replace(/Created: .*/, 'Created: [timestamp]'))
     expect(normalize(result1)).toBe(normalize(result2))
   })
 

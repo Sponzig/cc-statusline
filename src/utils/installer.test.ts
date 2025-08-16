@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import path from 'path'
 
 // Use vi.hoisted to properly hoist mock variables
 const { mockMkdir, mockWriteFile, mockReadFile, mockAccess } = vi.hoisted(() => ({
@@ -19,6 +20,7 @@ vi.mock('fs', () => ({
 }))
 
 import { installStatusline, updateSettingsJson, checkClaudeCodeSetup } from './installer.js'
+import { testPaths } from '../__tests__/setup.js'
 
 describe('installStatusline', () => {
   beforeEach(() => {
@@ -32,23 +34,23 @@ describe('installStatusline', () => {
 
   it('should create directory and write script file', async () => {
     const script = '#!/bin/bash\necho "test statusline"'
-    const outputPath = '/home/user/.claude/statusline.sh'
+    const outputPath = testPaths.statusline
     
     await installStatusline(script, outputPath)
     
-    expect(mockMkdir).toHaveBeenCalledWith('/home/user/.claude', { recursive: true })
+    expect(mockMkdir).toHaveBeenCalledWith(testPaths.claude, { recursive: true })
     expect(mockWriteFile).toHaveBeenCalledWith(outputPath, script, { mode: 0o755 })
-    expect(mockWriteFile).toHaveBeenCalledWith('/home/user/.claude/settings.json', expect.any(String))
+    expect(mockWriteFile).toHaveBeenCalledWith(testPaths.settings, expect.any(String))
   })
 
   it('should update settings.json after writing script', async () => {
     const script = '#!/bin/bash\necho "test"'
-    const outputPath = '/home/user/.claude/statusline.sh'
+    const outputPath = testPaths.statusline
     
     await installStatusline(script, outputPath)
     
     const settingsCall = mockWriteFile.mock.calls.find(call => 
-      call[0] === '/home/user/.claude/settings.json'
+      call[0] === testPaths.settings
     )
     expect(settingsCall).toBeDefined()
     expect(settingsCall![1]).toContain('"statusLine"')
@@ -59,7 +61,7 @@ describe('installStatusline', () => {
     mockMkdir.mockRejectedValue(new Error('Permission denied'))
     
     const script = '#!/bin/bash\necho "test"'
-    const outputPath = '/invalid/path/statusline.sh'
+    const outputPath = path.join(testPaths.temp, 'invalid', 'statusline.sh')
     
     await expect(installStatusline(script, outputPath))
       .rejects.toThrow('Failed to install statusline')
@@ -80,11 +82,11 @@ describe('installStatusline', () => {
 
   it('should handle safe test paths correctly', async () => {
     const script = '#!/bin/bash\necho "test"'
-    const outputPath = '/tmp/test-claude/statusline.sh'
+    const outputPath = path.join(testPaths.temp, 'statusline.sh')
     
     await installStatusline(script, outputPath)
     
-    expect(mockMkdir).toHaveBeenCalledWith('/tmp/test-claude', { recursive: true })
+    expect(mockMkdir).toHaveBeenCalledWith(testPaths.temp, { recursive: true })
     expect(mockWriteFile).toHaveBeenCalledWith(outputPath, script, { mode: 0o755 })
   })
 })
@@ -99,10 +101,10 @@ describe('updateSettingsJson', () => {
   })
 
   it('should create new settings.json when file does not exist', async () => {
-    await updateSettingsJson('/home/user/.claude', 'statusline.sh')
+    await updateSettingsJson(testPaths.claude, 'statusline.sh')
     
     expect(mockWriteFile).toHaveBeenCalledWith(
-      '/home/user/.claude/settings.json',
+      testPaths.settings,
       expect.stringContaining('\".claude/statusline.sh\"')
     )
     
@@ -122,7 +124,7 @@ describe('updateSettingsJson', () => {
     
     mockReadFile.mockResolvedValue(existingSettings)
     
-    await updateSettingsJson('/home/user/.claude', 'new-statusline.sh')
+    await updateSettingsJson(testPaths.claude, 'new-statusline.sh')
     
     const writtenContent = mockWriteFile.mock.calls[0]![1] as string
     const parsedContent = JSON.parse(writtenContent)
@@ -134,16 +136,16 @@ describe('updateSettingsJson', () => {
   it('should handle invalid JSON in existing settings', async () => {
     mockReadFile.mockResolvedValue('invalid json content')
     
-    await updateSettingsJson('/home/user/.claude', 'statusline.sh')
+    await updateSettingsJson(testPaths.claude, 'statusline.sh')
     
     expect(mockWriteFile).toHaveBeenCalledWith(
-      '/home/user/.claude/settings.json',
+      testPaths.settings,
       expect.stringContaining('\".claude/statusline.sh\"')
     )
   })
 
   it('should create correct statusLine configuration', async () => {
-    await updateSettingsJson('/path/to/.claude', 'my-statusline.sh')
+    await updateSettingsJson(testPaths.claude, 'my-statusline.sh')
     
     const writtenContent = mockWriteFile.mock.calls[0]![1] as string
     const settings = JSON.parse(writtenContent)
@@ -158,7 +160,7 @@ describe('updateSettingsJson', () => {
   it('should throw error when write fails', async () => {
     mockWriteFile.mockRejectedValue(new Error('Permission denied'))
     
-    await expect(updateSettingsJson('/invalid/.claude', 'statusline.sh'))
+    await expect(updateSettingsJson(path.join(testPaths.temp, 'invalid'), 'statusline.sh'))
       .rejects.toThrow('SETTINGS_UPDATE_FAILED')
   })
 })
