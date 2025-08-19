@@ -24,6 +24,11 @@ npm run test:integration  # Run only integration tests
 npm run test:legacy       # Run legacy test workflow (npm run build && node dist/test.js)
 ```
 
+Type checking:
+```bash
+npx tsc --noEmit          # Run TypeScript compiler check
+```
+
 Run the CLI tool:
 ```bash
 npm start
@@ -52,6 +57,7 @@ This is a CLI tool for generating custom Claude Code statuslines. The architectu
   - `colors.ts` - TTY-aware color generation and theming
   - `git.ts` - Git branch detection and display utilities
   - `usage.ts` - ccusage integration for cost/session tracking
+  - `system.ts` - System monitoring (CPU, RAM, load averages)
 
 - **Code Generation** (`src/generators/`):
   - `bash-generator.ts` - Main script generator that orchestrates features into bash scripts
@@ -109,7 +115,7 @@ npm run test:integration  # Integration tests only
 Test structure:
 - **Setup**: `src/__tests__/setup.ts` - Global mocks for fs, child_process, inquirer, ora
 - **Fixtures**: `src/__tests__/fixtures/` - Mock data for Claude Code JSON and configurations
-- **Coverage**: 80% threshold for branches, functions, lines, and statements
+- **Coverage**: Comprehensive test coverage with detailed reporting (thresholds configurable in vitest.config.ts)
 - **Validation**: Tests include safety validation for bash optimizer and cache manager
 
 ### Manual Testing Workflow
